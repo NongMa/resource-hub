@@ -1,0 +1,96 @@
+import qiniu from 'qiniu'
+
+const accessKey = process.env.QINIU_ACCESS_KEY || ''
+const secretKey = process.env.QINIU_SECRET_KEY || ''
+const bucket = process.env.QINIU_BUCKET || ''
+const zone = process.env.QINIU_ZONE || 'z0'
+const domain = process.env.QINIU_DOMAIN || ''
+
+// 创建鉴权对象
+const mac = new qiniu.auth.digest.Mac(accessKey, secretKey)
+
+// 配置项
+const config = new qiniu.conf.Config()
+config.zone = qiniu.zone[zone as keyof typeof qiniu.zone] || qiniu.zone.zone0
+
+// 存储空间
+const bucketManager = new qiniu.rs.BucketManager(mac, config)
+
+// 私有空间签名配置
+const privateBucketManager = new qiniu.rs.BucketManager(mac, config)
+
+/**
+ * 生成七牛云上传凭证（私有空间）
+ */
+export function getUploadToken(key: string): string {
+  const options = {
+    scope: `${bucket}:${key}`,
+    expires: 3600, // 1小时有效期
+    returnBody: '{"key":"$(key)","hash":"$(etag)","fsize":$(fsize),"mimeType":"$(mimeType)"}',
+  }
+  const putPolicy = new qiniu.rs.PutPolicy(options)
+  return putPolicy.uploadToken(mac)
+}
+
+/**
+ * 生成七牛云文件访问URL（私有空间需要签名）
+ * @param key 文件 key
+ * @param expires 签名有效期（秒），默认 3600 秒
+ */
+export function getPrivateUrl(key: string, expires: number = 3600): string {
+  const baseUrl = `https://${domain}/${key}`
+  
+  // 生成私有签名 URL
+  const signedUrl = qiniu.util.generateAccessUrl(mac, baseUrl, {
+    expires: expires,
+  })
+  
+  return signedUrl
+}
+
+/**
+ * 获取文件下载链接（兼容公开和私有空间）
+ * 私有空间返回签名 URL，公开空间返回直接 URL
+ */
+export function getFileUrl(key: string): string {
+  return getPrivateUrl(key)
+}
+
+/**
+ * 删除七牛云文件
+ */
+export function deleteFile(key: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    bucketManager.delete(bucket, key, (err, respBody, respInfo) => {
+      if (err) {
+        reject(err)
+      } else if (respInfo.statusCode !== 200) {
+        reject(new Error(`Delete failed: ${respInfo.statusCode}`))
+      } else {
+        resolve()
+      }
+    })
+  })
+}
+
+/**
+ * 获取文件信息
+ */
+export function getFileInfo(key: string): Promise<{ size: number; mimeType: string }> {
+  return new Promise((resolve, reject) => {
+    bucketManager.stat(bucket, key, (err, respBody, respInfo) => {
+      if (err) {
+        reject(err)
+      } else if (respInfo.statusCode !== 200) {
+        reject(new Error(`Stat failed: ${respInfo.statusCode}`))
+      } else {
+        resolve({
+          size: respBody.size,
+          mimeType: respBody.mimeType,
+        })
+      }
+    })
+  })
+}
+
+export { domain }
