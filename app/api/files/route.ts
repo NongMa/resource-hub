@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { PrismaClient } from '@prisma/client'
 import { deleteFile as deleteQiniuFile, getFileUrl } from '@/lib/qiniu'
+import { isKeyOwnedByUser } from '@/lib/fileKey'
 
 const prisma = new PrismaClient()
 
@@ -59,6 +60,21 @@ export async function POST(request: NextRequest) {
 
     const { name, key, size, mimeType, folderId } = await request.json()
 
+    // key 必须落在当前用户的目录下
+    if (!isKeyOwnedByUser(user.id, key)) {
+      return NextResponse.json({ error: '无权使用该文件路径' }, { status: 403 })
+    }
+
+    if (folderId) {
+      const folder = await prisma.folder.findFirst({
+        where: { id: folderId, userId: user.id },
+      })
+
+      if (!folder) {
+        return NextResponse.json({ error: '文件夹不存在' }, { status: 404 })
+      }
+    }
+
     const file = await prisma.file.create({
       data: {
         name,
@@ -100,12 +116,16 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: '用户不存在' }, { status: 404 })
     }
 
-    const file = await prisma.file.findFirst({
-      where: { id: fileId, userId: user.id },
+    const file = await prisma.file.findUnique({
+      where: { id: fileId },
     })
 
     if (!file) {
       return NextResponse.json({ error: '文件不存在' }, { status: 404 })
+    }
+
+    if (file.userId !== user.id) {
+      return NextResponse.json({ error: '无权操作该文件' }, { status: 403 })
     }
 
     // 删除七牛云文件

@@ -62,19 +62,18 @@ export function FileUpload({ folderId, onUploadComplete }: FileUploadProps) {
         for (let i = 0; i < acceptedFiles.length; i++) {
           const file = acceptedFiles[i]
           
-          // 获取上传凭证
-          const key = folderId ? `${folderId}/${file.name}` : file.name
+          // 获取上传凭证（key 由服务端生成，客户端不可指定）
           const res = await fetch('/api/files/upload', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ key, fileName: file.name }),
+            body: JSON.stringify({ fileName: file.name, folderId }),
           })
 
           if (!res.ok) {
             throw new Error('获取上传凭证失败')
           }
 
-          const { token, uploadUrl } = await res.json()
+          const { token, key, uploadUrl } = await res.json()
 
           // 上传到七牛
           const formData = new FormData()

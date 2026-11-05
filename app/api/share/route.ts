@@ -25,12 +25,16 @@ export async function POST(request: NextRequest) {
 
     const { fileId, expiresIn } = await request.json()
 
-    const file = await prisma.file.findFirst({
-      where: { id: fileId, userId: user.id },
+    const file = await prisma.file.findUnique({
+      where: { id: fileId },
     })
 
     if (!file) {
       return NextResponse.json({ error: '文件不存在' }, { status: 404 })
+    }
+
+    if (file.userId !== user.id) {
+      return NextResponse.json({ error: '无权分享该文件' }, { status: 403 })
     }
 
     const token = generateShareToken()
