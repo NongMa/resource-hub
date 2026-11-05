@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import { useDropzone } from 'react-dropzone'
 import { Upload, FileWarning } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -12,14 +12,49 @@ interface FileUploadProps {
   onUploadComplete?: () => void
 }
 
+function uploadWithProgress(
+  url: string,
+  formData: FormData,
+  onProgress: (percent: number) => void
+) {
+  return new Promise<void>((resolve, reject) => {
+    const xhr = new XMLHttpRequest()
+    xhr.open('POST', url)
+
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable) {
+        onProgress((event.loaded / event.total) * 100)
+      }
+    }
+
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve()
+      } else {
+        reject(new Error(`上传失败 (HTTP ${xhr.status})`))
+      }
+    }
+
+    xhr.onerror = () => reject(new Error('网络错误，上传失败'))
+    xhr.onabort = () => reject(new Error('上传已取消'))
+
+    // 不手动设置 Content-Type，交给浏览器生成 multipart boundary
+    xhr.send(formData)
+  })
+}
+
 export function FileUpload({ folderId, onUploadComplete }: FileUploadProps) {
   const [uploading, setUploading] = useState(false)
+  const [completed, setCompleted] = useState(false)
   const [progress, setProgress] = useState(0)
   const [error, setError] = useState<string | null>(null)
+  const successTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const onDrop = useCallback(
     async (acceptedFiles: File[]) => {
+      if (successTimer.current) clearTimeout(successTimer.current)
       setUploading(true)
+      setCompleted(false)
       setError(null)
       setProgress(0)
 
@@ -47,14 +82,10 @@ export function FileUpload({ folderId, onUploadComplete }: FileUploadProps) {
           formData.append('token', token)
           formData.append('key', key)
 
-          const uploadRes = await fetch(uploadUrl, {
-            method: 'POST',
-            body: formData,
+          await uploadWithProgress(uploadUrl, formData, (percent) => {
+            const base = (i / acceptedFiles.length) * 100
+            setProgress(Math.round(base + percent / acceptedFiles.length))
           })
-
-          if (!uploadRes.ok) {
-            throw new Error(`上传失败: ${file.name}`)
-          }
 
           // 保存文件信息到数据库
           await fetch('/api/files', {
@@ -69,10 +100,15 @@ export function FileUpload({ folderId, onUploadComplete }: FileUploadProps) {
             }),
           })
 
-          setProgress(Math.round(((i + 1) / acceptedFiles.length) * 100))
         }
 
+        setProgress(100)
+        setCompleted(true)
         onUploadComplete?.()
+        successTimer.current = setTimeout(() => {
+          setCompleted(false)
+          setProgress(0)
+        }, 1500)
       } catch (err) {
         setError(err instanceof Error ? err.message : '上传失败')
       } finally {
@@ -104,6 +140,17 @@ export function FileUpload({ folderId, onUploadComplete }: FileUploadProps) {
             <>
               <Upload className="h-10 w-10 text-primary animate-pulse" />
               <p className="text-sm text-muted-foreground">上传中... {progress}%</p>
+              <div className="w-full max-w-xs h-1.5 rounded-full bg-muted overflow-hidden">
+                <div
+                  className="h-full bg-primary transition-all"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+            </>
+          ) : completed ? (
+            <>
+              <Upload className="h-10 w-10 text-primary" />
+              <p className="text-sm text-muted-foreground">已完成 100%</p>
             </>
           ) : (
             <>
