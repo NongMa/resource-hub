@@ -2,7 +2,6 @@
 
 import { File, Image, Video, Music, FileText, MoreVertical, Download, Share2, Trash2, Eye, Edit } from 'lucide-react'
 import { formatFileSize, getFileType } from '@/lib/utils'
-import { getFileUrl } from '@/lib/qiniu'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import {
@@ -14,19 +13,22 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { useState } from 'react'
 
+interface FileCardFile {
+  id: string
+  name: string
+  key: string
+  size: number
+  mimeType: string
+  createdAt: string
+  url: string
+}
+
 interface FileCardProps {
-  file: {
-    id: string
-    name: string
-    key: string
-    size: number
-    mimeType: string
-    createdAt: string
-  }
-  onPreview: (file: typeof FileCardProps.file) => void
-  onShare: (file: typeof FileCardProps.file) => void
-  onDelete: (file: typeof FileCardProps.file) => void
-  onRename: (file: typeof FileCardProps.file) => void
+  file: FileCardFile
+  onPreview: (file: FileCardFile) => void
+  onShare: (file: FileCardFile) => void
+  onDelete: (file: FileCardFile) => void
+  onRename: (file: FileCardFile) => void
 }
 
 export function FileCard({ file, onPreview, onShare, onDelete, onRename }: FileCardProps) {
@@ -49,9 +51,8 @@ export function FileCard({ file, onPreview, onShare, onDelete, onRename }: FileC
   }
 
   const handleDownload = () => {
-    const url = getFileUrl(file.key)
     const link = document.createElement('a')
-    link.href = url
+    link.href = file.url
     link.download = file.name
     link.click()
   }
@@ -61,7 +62,7 @@ export function FileCard({ file, onPreview, onShare, onDelete, onRename }: FileC
       <div className="aspect-square flex items-center justify-center bg-muted/50 p-4">
         {fileType === 'image' && !imageError ? (
           <img
-            src={getFileUrl(file.key)}
+            src={file.url}
             alt={file.name}
             className="max-h-full max-w-full object-contain"
             onError={() => setImageError(true)}

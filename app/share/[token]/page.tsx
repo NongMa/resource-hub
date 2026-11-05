@@ -6,7 +6,6 @@ import { Download, File, Image, Video, Music, FileText, ArrowLeft, Calendar } fr
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { getFileType, formatFileSize } from '@/lib/utils'
-import { getFileUrl } from '@/lib/qiniu'
 
 interface ShareData {
   id: string
@@ -18,6 +17,7 @@ interface ShareData {
     key: string
     size: number
     mimeType: string
+    url: string
   }
 }
 
@@ -76,7 +76,7 @@ export default function SharePage() {
 
   const { file } = shareData
   const fileType = getFileType(file.mimeType)
-  const fileUrl = getFileUrl(file.key)
+  const fileUrl = file.url
 
   const getIcon = () => {
     switch (fileType) {

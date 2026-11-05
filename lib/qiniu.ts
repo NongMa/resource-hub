@@ -9,9 +9,17 @@ const domain = process.env.QINIU_DOMAIN || ''
 // 创建鉴权对象
 const mac = new qiniu.auth.digest.Mac(accessKey, secretKey)
 
+// 区域映射
+const zones = {
+  z0: qiniu.zone.Zone_z0,
+  z1: qiniu.zone.Zone_z1,
+  z2: qiniu.zone.Zone_z2,
+  na0: qiniu.zone.Zone_na0,
+} as const
+
 // 配置项
 const config = new qiniu.conf.Config()
-config.zone = qiniu.zone[zone as keyof typeof qiniu.zone] || qiniu.zone.zone0
+config.zone = zones[zone as keyof typeof zones] || qiniu.zone.Zone_z0
 
 // 存储空间
 const bucketManager = new qiniu.rs.BucketManager(mac, config)
@@ -38,14 +46,10 @@ export function getUploadToken(key: string): string {
  * @param expires 签名有效期（秒），默认 3600 秒
  */
 export function getPrivateUrl(key: string, expires: number = 3600): string {
-  const baseUrl = `https://${domain}/${key}`
+  const deadline = Math.ceil(Date.now() / 1000) + expires
   
   // 生成私有签名 URL
-  const signedUrl = qiniu.util.generateAccessUrl(mac, baseUrl, {
-    expires: expires,
-  })
-  
-  return signedUrl
+  return bucketManager.privateDownloadUrl(`https://${domain}`, key, deadline)
 }
 
 /**

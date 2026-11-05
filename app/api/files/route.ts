@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { PrismaClient } from '@prisma/client'
-import { deleteFile as deleteQiniuFile } from '@/lib/qiniu'
+import { deleteFile as deleteQiniuFile, getFileUrl } from '@/lib/qiniu'
 
 const prisma = new PrismaClient()
 
@@ -33,7 +33,9 @@ export async function GET(request: NextRequest) {
       orderBy: { createdAt: 'desc' },
     })
 
-    return NextResponse.json(files)
+    return NextResponse.json(
+      files.map((file) => ({ ...file, url: getFileUrl(file.key) }))
+    )
   } catch (error) {
     console.error('Get files error:', error)
     return NextResponse.json({ error: '获取文件列表失败' }, { status: 500 })

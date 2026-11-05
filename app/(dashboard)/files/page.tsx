@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import { DashboardLayout } from './layout'
+import { DashboardLayout } from '../DashboardLayout'
 import { FileList } from '@/components/FileList'
 import { PreviewModal } from '@/components/PreviewModal'
 import { ShareModal } from '@/components/ShareModal'
@@ -15,6 +15,7 @@ interface FileItem {
   size: number
   mimeType: string
   createdAt: string
+  url: string
 }
 
 export default function DashboardPage() {

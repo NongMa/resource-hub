@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { PrismaClient } from '@prisma/client'
 import { generateShareToken } from '@/lib/utils'
+import { getFileUrl } from '@/lib/qiniu'
 
 const prisma = new PrismaClient()
 
@@ -79,7 +80,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: '分享已过期' }, { status: 410 })
     }
 
-    return NextResponse.json(share)
+    return NextResponse.json({
+      ...share,
+      file: { ...share.file, url: getFileUrl(share.file.key) },
+    })
   } catch (error) {
     console.error('Get share error:', error)
     return NextResponse.json({ error: '获取分享信息失败' }, { status: 500 })

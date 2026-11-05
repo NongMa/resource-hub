@@ -4,7 +4,6 @@ import { X, Download, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { getFileType, formatFileSize } from '@/lib/utils'
-import { getFileUrl } from '@/lib/qiniu'
 
 interface PreviewModalProps {
   open: boolean
@@ -15,6 +14,7 @@ interface PreviewModalProps {
     key: string
     size: number
     mimeType: string
+    url: string
   } | null
 }
 
@@ -42,7 +42,7 @@ export function PreviewModal({ open, onOpenChange, file }: PreviewModalProps) {
   if (!file) return null
 
   const fileType = getFileType(file.mimeType)
-  const fileUrl = getFileUrl(file.key)
+  const fileUrl = file.url
 
   const handleDownload = () => {
     const link = document.createElement('a')
