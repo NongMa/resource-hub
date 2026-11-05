@@ -94,12 +94,38 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: '用户不存在' }, { status: 404 })
     }
 
-    const folder = await prisma.folder.findFirst({
-      where: { id: folderId, userId: user.id },
+    const folder = await prisma.folder.findUnique({
+      where: { id: folderId },
     })
 
     if (!folder) {
       return NextResponse.json({ error: '文件夹不存在' }, { status: 404 })
+    }
+
+    if (folder.userId !== user.id) {
+      return NextResponse.json({ error: '无权操作该文件夹' }, { status: 403 })
+    }
+
+    // 非空文件夹不允许删除：先统计其下文件与子文件夹数量
+    const [fileCount, folderCount] = await Promise.all([
+      prisma.file.count({ where: { folderId } }),
+      prisma.folder.count({ where: { parentId: folderId } }),
+    ])
+
+    if (fileCount > 0 || folderCount > 0) {
+      const parts: string[] = []
+      if (folderCount > 0) parts.push(`${folderCount} 个子文件夹`)
+      if (fileCount > 0) parts.push(`${fileCount} 个文件`)
+
+      return NextResponse.json(
+        {
+          error: '文件夹非空，请先清空其中的文件与子文件夹',
+          detail: `该文件夹下仍有 ${parts.join('、')}`,
+          fileCount,
+          folderCount,
+        },
+        { status: 409 }
+      )
     }
 
     await prisma.folder.delete({

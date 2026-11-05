@@ -2,7 +2,7 @@
 
 import { useSession, signOut } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import {
   Home,
   Folder,
@@ -12,6 +12,7 @@ import {
   User,
   ChevronRight,
   Plus,
+  Trash2,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -37,6 +38,7 @@ export function DashboardLayout({
   const router = useRouter()
   const [folders, setFolders] = useState<FolderItem[]>([])
   const [loading, setLoading] = useState(true)
+  const [folderError, setFolderError] = useState('')
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -44,25 +46,49 @@ export function DashboardLayout({
     }
   }, [status, router])
 
-  useEffect(() => {
-    const fetchFolders = async () => {
-      try {
-        const res = await fetch('/api/folders')
-        if (res.ok) {
-          const data = await res.json()
-          setFolders(data)
-        }
-      } catch (error) {
-        console.error('Fetch folders error:', error)
-      } finally {
-        setLoading(false)
+  const fetchFolders = useCallback(async () => {
+    try {
+      const res = await fetch('/api/folders')
+      if (res.ok) {
+        const data = await res.json()
+        setFolders(data)
       }
+    } catch (error) {
+      console.error('Fetch folders error:', error)
+    } finally {
+      setLoading(false)
     }
+  }, [])
 
+  useEffect(() => {
     if (status === 'authenticated') {
       fetchFolders()
     }
-  }, [status])
+  }, [status, fetchFolders])
+
+  const handleDeleteFolder = async (folder: FolderItem) => {
+    if (!confirm(`确定要删除文件夹「${folder.name}」吗？`)) return
+
+    setFolderError('')
+    try {
+      const res = await fetch(`/api/folders?id=${folder.id}`, { method: 'DELETE' })
+      const data = await res.json().catch(() => null)
+
+      if (!res.ok) {
+        // 优先展示服务端返回的具体原因（如文件夹非空）
+        setFolderError(data?.detail || data?.error || '删除文件夹失败')
+        return
+      }
+
+      if (currentFolderId === folder.id) {
+        onNavigateToFolder(null)
+      }
+      fetchFolders()
+    } catch (error) {
+      console.error('Delete folder error:', error)
+      setFolderError('删除文件夹失败，请稍后重试')
+    }
+  }
 
   const handleSignOut = async () => {
     await signOut({ redirect: true, callbackUrl: '/login' })
@@ -112,16 +138,35 @@ export function DashboardLayout({
             ) : rootFolders.length > 0 ? (
               <div className="space-y-1">
                 {rootFolders.map((folder) => (
-                  <Button
-                    key={folder.id}
-                    variant={currentFolderId === folder.id ? 'secondary' : 'ghost'}
-                    className="w-full justify-start"
-                    onClick={() => onNavigateToFolder(folder.id)}
-                  >
-                    <FolderOpen className="h-4 w-4 mr-2" />
-                    <span className="truncate">{folder.name}</span>
-                  </Button>
+                  <div key={folder.id} className="flex items-center gap-1">
+                    <Button
+                      variant={currentFolderId === folder.id ? 'secondary' : 'ghost'}
+                      className="w-full justify-start"
+                      onClick={() => onNavigateToFolder(folder.id)}
+                    >
+                      <FolderOpen className="h-4 w-4 mr-2 shrink-0" />
+                      <span className="truncate">{folder.name}</span>
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
+                      onClick={() => handleDeleteFolder(folder)}
+                      aria-label={`删除文件夹 ${folder.name}`}
+                      title={`删除文件夹 ${folder.name}`}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 ))}
+                {folderError && (
+                  <p
+                    role="alert"
+                    className="rounded-md border border-destructive/30 bg-destructive/10 px-2 py-1.5 text-xs leading-relaxed text-destructive"
+                  >
+                    {folderError}
+                  </p>
+                )}
               </div>
             ) : (
               <div className="text-sm text-muted-foreground">暂无文件夹</div>
