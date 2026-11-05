@@ -6,8 +6,11 @@ import { Providers } from '@/components/Providers'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'ResourceHub - 资源管理平台',
-  description: '简单易用的资源管理平台，支持文件上传、分享和管理',
+  title: {
+    default: '资料管家',
+    template: '%s · 资料管家',
+  },
+  description: '简单易用的资料管理平台，支持文件上传、分享和管理',
 }
 
 export default function RootLayout({

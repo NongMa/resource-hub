@@ -57,3 +57,115 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* 登录 / 注册页背景：渐变 + 光晕 + 网格 + 噪点，全部为本地 CSS，无外链图片 */
+.auth-bg {
+  background-color: #f8fafc;
+  background-image:
+    radial-gradient(52rem 52rem at 8% -10%, hsl(221 83% 53% / 0.22), transparent 62%),
+    radial-gradient(46rem 46rem at 108% 4%, hsl(262 83% 58% / 0.18), transparent 62%),
+    radial-gradient(42rem 42rem at 50% 118%, hsl(199 89% 48% / 0.16), transparent 60%),
+    linear-gradient(160deg, #f8fafc 0%, #eff3ff 48%, #f6f8fb 100%);
+}
+
+.dark .auth-bg {
+  background-color: #050814;
+  background-image:
+    radial-gradient(52rem 52rem at 8% -10%, hsl(221 83% 53% / 0.28), transparent 62%),
+    radial-gradient(46rem 46rem at 108% 4%, hsl(262 83% 58% / 0.24), transparent 62%),
+    radial-gradient(42rem 42rem at 50% 118%, hsl(199 89% 48% / 0.2), transparent 60%),
+    linear-gradient(160deg, #020617 0%, #0b1224 55%, #050814 100%);
+}
+
+.auth-grid {
+  background-image:
+    linear-gradient(to right, hsl(222 47% 11% / 0.06) 1px, transparent 1px),
+    linear-gradient(to bottom, hsl(222 47% 11% / 0.06) 1px, transparent 1px);
+  background-size: 44px 44px;
+  -webkit-mask-image: radial-gradient(72rem 46rem at 50% 38%, #000 12%, transparent 78%);
+  mask-image: radial-gradient(72rem 46rem at 50% 38%, #000 12%, transparent 78%);
+}
+
+.dark .auth-grid {
+  background-image:
+    linear-gradient(to right, hsl(210 40% 98% / 0.07) 1px, transparent 1px),
+    linear-gradient(to bottom, hsl(210 40% 98% / 0.07) 1px, transparent 1px);
+}
+
+.auth-noise {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+}
+
+@keyframes auth-float {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(0, -1.25rem, 0) scale(1.05);
+  }
+}
+
+.auth-float {
+  animation: auth-float 20s ease-in-out infinite;
+}
+
+.auth-float-slow {
+  animation: auth-float 28s ease-in-out -8s infinite;
+}
+
+/* 网格极慢位移，仅 transform */
+@keyframes auth-drift {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-22px, -22px, 0);
+  }
+}
+
+.auth-drift {
+  animation: auth-drift 36s linear infinite alternate;
+}
+
+/* 光晕呼吸，仅 opacity */
+@keyframes auth-breathe {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 0.95;
+  }
+}
+
+.auth-breathe {
+  animation: auth-breathe 14s ease-in-out infinite;
+}
+
+/* 卡片入场：淡入 + 轻微上移 */
+@keyframes auth-card-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 12px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.auth-card-in {
+  animation: auth-card-in 0.42s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-float,
+  .auth-float-slow,
+  .auth-drift,
+  .auth-breathe,
+  .auth-card-in {
+    animation: none;
+  }
+}

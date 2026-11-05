@@ -4,9 +4,20 @@ import { signIn } from 'next-auth/react'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { CircleAlert } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  AuthLayout,
+  authCardClass,
+  authErrorClass,
+  authFooterClass,
+  authInputClass,
+  authLinkClass,
+  authSpinnerClass,
+  authSubmitClass,
+} from '@/components/AuthLayout'
 
 export default function RegisterPage() {
   const router = useRouter()
@@ -64,16 +75,19 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1 text-center">
-          <CardTitle className="text-2xl font-bold">注册</CardTitle>
+    <AuthLayout>
+      <Card className={authCardClass}>
+        <CardHeader className="space-y-2 pb-4 text-center">
+          <CardTitle className="text-2xl font-bold tracking-tight">注册</CardTitle>
           <CardDescription>创建一个新账号</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
-              <div className="p-3 text-sm text-red-500 bg-red-50 rounded-md">{error}</div>
+              <div role="alert" className={authErrorClass}>
+                <CircleAlert className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+                <span>{error}</span>
+              </div>
             )}
             <div className="space-y-2">
               <Input
@@ -81,6 +95,8 @@ export default function RegisterPage() {
                 placeholder="昵称（可选）"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
+                aria-invalid={!!error}
+                className={authInputClass}
               />
             </div>
             <div className="space-y-2">
@@ -90,6 +106,8 @@ export default function RegisterPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                aria-invalid={!!error}
+                className={authInputClass}
               />
             </div>
             <div className="space-y-2">
@@ -99,6 +117,8 @@ export default function RegisterPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                aria-invalid={!!error}
+                className={authInputClass}
               />
             </div>
             <div className="space-y-2">
@@ -108,20 +128,23 @@ export default function RegisterPage() {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
+                aria-invalid={!!error}
+                className={authInputClass}
               />
             </div>
-            <Button type="submit" className="w-full" disabled={loading}>
+            <Button type="submit" className={authSubmitClass} disabled={loading}>
+              {loading && <span className={authSpinnerClass} aria-hidden="true" />}
               {loading ? '注册中...' : '注册'}
             </Button>
           </form>
-          <div className="mt-4 text-center text-sm">
+          <div className={authFooterClass}>
             已有账号?{' '}
-            <Link href="/login" className="text-primary hover:underline">
+            <Link href="/login" className={authLinkClass}>
               登录
             </Link>
           </div>
         </CardContent>
       </Card>
-    </div>
+    </AuthLayout>
   )
 }
