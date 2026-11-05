@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { PrismaClient } from '@prisma/client'
-import { getUploadToken, deleteFile } from '@/lib/qiniu'
+import { getUploadToken, getUploadUrl, deleteFile } from '@/lib/qiniu'
 import { nanoid } from 'nanoid'
 
 const prisma = new PrismaClient()
@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
     const uniqueKey = key || `${session.user.id}/${nanoid()}-${fileName}`
     const token = getUploadToken(uniqueKey)
 
-    return NextResponse.json({ token, key: uniqueKey })
+    return NextResponse.json({ token, key: uniqueKey, uploadUrl: getUploadUrl() })
   } catch (error) {
     console.error('Upload token error:', error)
     return NextResponse.json({ error: '获取上传凭证失败' }, { status: 500 })

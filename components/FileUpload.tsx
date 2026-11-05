@@ -39,7 +39,7 @@ export function FileUpload({ folderId, onUploadComplete }: FileUploadProps) {
             throw new Error('获取上传凭证失败')
           }
 
-          const { token } = await res.json()
+          const { token, uploadUrl } = await res.json()
 
           // 上传到七牛
           const formData = new FormData()
@@ -47,7 +47,7 @@ export function FileUpload({ folderId, onUploadComplete }: FileUploadProps) {
           formData.append('token', token)
           formData.append('key', key)
 
-          const uploadRes = await fetch('https://upload.qiniup.com', {
+          const uploadRes = await fetch(uploadUrl, {
             method: 'POST',
             body: formData,
           })

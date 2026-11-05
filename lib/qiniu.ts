@@ -15,6 +15,16 @@ const zones = {
   z1: qiniu.zone.Zone_z1,
   z2: qiniu.zone.Zone_z2,
   na0: qiniu.zone.Zone_na0,
+  as0: qiniu.zone.Zone_as0,
+} as const
+
+// 上传域名映射
+const uploadHosts = {
+  z0: 'https://upload.qiniup.com',
+  z1: 'https://up-z1.qiniup.com',
+  z2: 'https://up-z2.qiniup.com',
+  na0: 'https://up-na0.qiniup.com',
+  as0: 'https://upload-as0.qiniup.com',
 } as const
 
 // 配置项
@@ -38,6 +48,13 @@ export function getUploadToken(key: string): string {
   }
   const putPolicy = new qiniu.rs.PutPolicy(options)
   return putPolicy.uploadToken(mac)
+}
+
+/**
+ * 获取上传域名（按空间所在区域）
+ */
+export function getUploadUrl(): string {
+  return uploadHosts[zone as keyof typeof uploadHosts] || uploadHosts.z0
 }
 
 /**
