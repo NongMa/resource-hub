@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcryptjs'
 import { createHash, timingSafeEqual } from 'crypto'
+import { attemptLogin } from '@/lib/login-guard'
 
 const prisma = new PrismaClient()
 
@@ -70,11 +71,46 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    return NextResponse.json({
-      id: user.id,
-      email: user.email,
-      name: user.name,
-    })
+    // 与登录同源：走同一套验证码 / 限流 / 密码校验，通过后才签发一次性票据。
+    // 新账号通常等价于「第一次尝试」，不需要验证码；但若该邮箱此前已有失败记录或被锁定，则不会签发票据。
+    try {
+      const outcome = await attemptLogin({ email, password })
+      if (outcome.kind === 'ok') {
+        return NextResponse.json({
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          loginToken: outcome.loginToken,
+        })
+      }
+
+      const message =
+        outcome.kind === 'locked'
+          ? '账号已创建，但尝试次数过多，请 15 分钟后前往登录页登录'
+          : outcome.kind === 'captchaRequired'
+            ? '账号已创建，请前往登录页并完成图形验证码后登录'
+            : '账号已创建，请前往登录页登录'
+
+      return NextResponse.json({
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        loginToken: null,
+        autoLogin: false,
+        message,
+      })
+    } catch (error) {
+      // 账号已创建但票据签发失败时，明确告知用户去登录页登录，避免静默的「半登录」状态
+      console.error('Register auto-login failed:', error)
+      return NextResponse.json({
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        loginToken: null,
+        autoLogin: false,
+        message: '账号已创建，但自动登录暂时不可用，请前往登录页登录',
+      })
+    }
   } catch (error) {
     console.error('Register error:', error)
     return NextResponse.json({ error: '注册失败' }, { status: 500 })

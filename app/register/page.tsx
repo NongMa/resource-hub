@@ -59,15 +59,31 @@ export default function RegisterPage() {
         return
       }
 
-      // 注册成功后自动登录
-      await signIn('credentials', {
-        email,
-        password,
-        redirect: false,
-      })
+      // 服务端未签发票据（例如该邮箱已有失败记录）时，明确提示去登录页登录，不假装已登录
+      if (!data.loginToken) {
+        setError(data.message || '账号已创建，请前往登录页登录')
+        return
+      }
 
-      router.push('/')
-      router.refresh()
+      // 用一次性登录票据建立 NextAuth 会话
+      try {
+        const result = await signIn('credentials', {
+          email,
+          password,
+          loginToken: data.loginToken,
+          redirect: false,
+        })
+
+        if (result?.error) {
+          setError('账号已创建，但自动登录失败，请前往登录页登录')
+          return
+        }
+
+        router.push('/')
+        router.refresh()
+      } catch {
+        setError('账号已创建，但自动登录失败，请前往登录页登录')
+      }
     } catch (err) {
       setError('注册失败，请重试')
     } finally {
