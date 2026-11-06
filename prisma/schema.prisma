@@ -68,3 +68,27 @@ model Share {
 
   @@map("shares")
 }
+
+/// 登录失败计数（按邮箱的不可逆标识存储）
+model LoginAttempt {
+  emailHash    String    @id
+  failureCount Int       @default(0)
+  windowStart  DateTime
+  lockedUntil  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([updatedAt])
+  @@map("login_attempts")
+}
+
+/// 图形验证码消费状态（tokenHash 为 captchaId 的不可逆标识）
+model LoginCaptcha {
+  tokenHash String    @id
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([expiresAt])
+  @@map("login_captchas")
+}

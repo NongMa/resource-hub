@@ -75,3 +75,31 @@ ALTER TABLE "shares" ADD CONSTRAINT "shares_fileId_fkey" FOREIGN KEY ("fileId") 
 
 -- AddForeignKey
 ALTER TABLE "shares" ADD CONSTRAINT "shares_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- CreateTable
+CREATE TABLE "login_attempts" (
+    "emailHash" TEXT NOT NULL,
+    "failureCount" INTEGER NOT NULL DEFAULT 0,
+    "windowStart" TIMESTAMP(3) NOT NULL,
+    "lockedUntil" TIMESTAMP(3),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "login_attempts_pkey" PRIMARY KEY ("emailHash")
+);
+
+-- CreateTable
+CREATE TABLE "login_captchas" (
+    "tokenHash" TEXT NOT NULL,
+    "expiresAt" TIMESTAMP(3) NOT NULL,
+    "usedAt" TIMESTAMP(3),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "login_captchas_pkey" PRIMARY KEY ("tokenHash")
+);
+
+-- CreateIndex
+CREATE INDEX "login_attempts_updatedAt_idx" ON "login_attempts"("updatedAt");
+
+-- CreateIndex
+CREATE INDEX "login_captchas_expiresAt_idx" ON "login_captchas"("expiresAt");

@@ -4,6 +4,7 @@ import GitHubProvider from 'next-auth/providers/github'
 import GoogleProvider from 'next-auth/providers/google'
 import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcryptjs'
+import { consumeLoginTicket } from '@/lib/login-guard'
 
 const prisma = new PrismaClient()
 
@@ -14,9 +15,15 @@ export const authOptions: NextAuthOptions = {
       credentials: {
         email: { label: '邮箱', type: 'email' },
         password: { label: '密码', type: 'password' },
+        loginTicket: { label: '登录票据', type: 'text' },
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
+          return null
+        }
+
+        // 必须持有服务端签发的短期一次性票据，避免绕过验证码直连 NextAuth；票据消费后不可复用
+        if (!(await consumeLoginTicket(credentials.loginTicket, credentials.email))) {
           return null
         }
 
