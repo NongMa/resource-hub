@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { DashboardLayout } from '../DashboardLayout'
@@ -26,34 +26,83 @@ export default function DashboardPage() {
   const router = useRouter()
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null)
   const [files, setFiles] = useState<FileItem[]>([])
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(20)
+  const [total, setTotal] = useState(0)
+  const [hasMore, setHasMore] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const loadingMoreRef = useRef(false)
   const [previewFile, setPreviewFile] = useState<FileItem | null>(null)
   const [shareFile, setShareFile] = useState<{ id: string; name: string } | null>(null)
   const [showShareModal, setShowShareModal] = useState(false)
 
-  const fetchFiles = useCallback(async () => {
-    try {
-      const url = new URL('/api/files', window.location.origin)
-      if (currentFolderId) {
-        url.searchParams.set('folderId', currentFolderId)
-      }
-      const res = await fetch(url.toString())
-      if (res.ok) {
-        const data = await res.json()
-        setFiles(data)
-      }
-    } catch (error) {
-      console.error('Fetch files error:', error)
-    } finally {
-      setLoading(false)
-    }
-  }, [currentFolderId])
+  const loadFiles = useCallback(
+    async (targetPage: number, options: { append?: boolean; size?: number } = {}) => {
+      const append = !!options.append
 
+      // 追加加载用 ref 兜底，避免滚动监听连续触发导致重复请求
+      if (append) {
+        if (loadingMoreRef.current) return
+        loadingMoreRef.current = true
+        setLoadingMore(true)
+      } else {
+        setLoading(true)
+      }
+
+      try {
+        const url = new URL('/api/files', window.location.origin)
+        url.searchParams.set('page', String(targetPage))
+        url.searchParams.set('pageSize', String(options.size ?? pageSize))
+        if (currentFolderId) {
+          url.searchParams.set('folderId', currentFolderId)
+        }
+
+        const res = await fetch(url.toString())
+        if (!res.ok) return
+
+        const data = await res.json()
+        setFiles((prev) => {
+          if (!append) return data.files
+
+          // 按 id 去重，避免翻页期间数据变化造成重复条目
+          const seen = new Set(prev.map((item) => item.id))
+          return [...prev, ...data.files.filter((item: FileItem) => !seen.has(item.id))]
+        })
+        setPage(data.page)
+        setTotal(data.total)
+        setHasMore(data.hasMore)
+      } catch (error) {
+        console.error('Fetch files error:', error)
+      } finally {
+        if (append) {
+          loadingMoreRef.current = false
+          setLoadingMore(false)
+        } else {
+          setLoading(false)
+        }
+      }
+    },
+    [currentFolderId, pageSize]
+  )
+
+  // 目录 / 每页条数 / 视图切换时重置到第一页
   useEffect(() => {
     if (status === 'authenticated') {
-      fetchFiles()
+      loadFiles(1)
     }
-  }, [status, fetchFiles])
+  }, [status, loadFiles, currentFolderId, pageSize, viewMode])
+
+  const reload = useCallback(() => {
+    // 网格已累积多页，刷新时回到第一页；列表按当前页刷新
+    loadFiles(viewMode === 'list' ? page : 1)
+  }, [loadFiles, viewMode, page])
+
+  const handleLoadMore = useCallback(() => {
+    if (!hasMore || loading || loadingMoreRef.current) return
+    loadFiles(page + 1, { append: true })
+  }, [hasMore, loading, page, loadFiles])
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -69,7 +118,7 @@ export default function DashboardPage() {
         body: JSON.stringify({ name, parentId }),
       })
       if (res.ok) {
-        fetchFiles()
+        reload()
       }
     } catch (error) {
       console.error('Create folder error:', error)
@@ -82,7 +131,7 @@ export default function DashboardPage() {
     try {
       const res = await fetch(`/api/files?id=${file.id}`, { method: 'DELETE' })
       if (res.ok) {
-        fetchFiles()
+        reload()
       }
     } catch (error) {
       console.error('Delete file error:', error)
@@ -118,7 +167,7 @@ export default function DashboardPage() {
     setCurrentFolderId(folderId)
   }
 
-  if (status === 'loading' || loading) {
+  if (status === 'loading') {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-pulse">加载中...</div>
@@ -140,9 +189,20 @@ export default function DashboardPage() {
 
         <FileList
           files={files}
+          loading={loading}
+          loadingMore={loadingMore}
+          hasMore={hasMore}
+          total={total}
+          page={page}
+          pageSize={pageSize}
+          viewMode={viewMode}
           folderId={currentFolderId}
           onCreateFolder={handleCreateFolder}
-          onRefresh={fetchFiles}
+          onRefresh={reload}
+          onViewModeChange={setViewMode}
+          onPageChange={(nextPage) => loadFiles(nextPage)}
+          onPageSizeChange={(nextSize) => setPageSize(nextSize)}
+          onLoadMore={handleLoadMore}
           onPreview={(file) => setPreviewFile(file)}
           onShare={(file) => {
             setShareFile({ id: file.id, name: file.name })

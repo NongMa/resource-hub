@@ -24,6 +24,14 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const folderId = searchParams.get('folderId')
 
+    // 分页参数：page 从 1 开始，pageSize 限制在 1–100（默认 20）
+    const pageParam = parseInt(searchParams.get('page') || '1', 10)
+    const sizeParam = parseInt(searchParams.get('pageSize') || '20', 10)
+    const page = Number.isFinite(pageParam) && pageParam > 0 ? pageParam : 1
+    const pageSize = Number.isFinite(sizeParam)
+      ? Math.min(Math.max(sizeParam, 1), 100)
+      : 20
+
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
     })
@@ -32,16 +40,24 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: '用户不存在' }, { status: 404 })
     }
 
-    const files = await prisma.file.findMany({
-      where: {
-        userId: user.id,
-        folderId: folderId || null,
-      },
-      orderBy: { createdAt: 'desc' },
-    })
+    const where = {
+      userId: user.id,
+      folderId: folderId || null,
+    }
 
-    return NextResponse.json(
-      files.map((file) => {
+    // createdAt 可能相同，追加 id 作为次级排序，避免分页漏条/重条
+    const [total, files] = await prisma.$transaction([
+      prisma.file.count({ where }),
+      prisma.file.findMany({
+        where,
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+    ])
+
+    return NextResponse.json({
+      files: files.map((file) => {
         const base = { ...file, url: getFileUrl(file.key) }
 
         // 仅图片下发处理后的地址；签名在本地计算，不产生额外网络请求
@@ -55,8 +71,12 @@ export async function GET(request: NextRequest) {
           previewUrl: getPreviewImageUrl(file.key, 'slim'),
           smallUrl: getPreviewImageUrl(file.key, 'small'),
         }
-      })
-    )
+      }),
+      total,
+      page,
+      pageSize,
+      hasMore: page * pageSize < total,
+    })
   } catch (error) {
     console.error('Get files error:', error)
     return NextResponse.json({ error: '获取文件列表失败' }, { status: 500 })
