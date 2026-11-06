@@ -55,6 +55,8 @@ interface FileListProps {
   pageSize: number
   viewMode: ViewMode
   folderId?: string | null
+  searchQuery: string
+  onSearchQueryChange: (value: string) => void
   onCreateFolder: (name: string, parentId?: string) => void
   onRefresh: () => void
   onViewModeChange: (mode: ViewMode) => void
@@ -133,6 +135,8 @@ export function FileList({
   pageSize,
   viewMode,
   folderId,
+  searchQuery,
+  onSearchQueryChange,
   onCreateFolder,
   onRefresh,
   onViewModeChange,
@@ -145,14 +149,9 @@ export function FileList({
   onRename,
   onNavigateToFolder,
 }: FileListProps) {
-  const [searchQuery, setSearchQuery] = useState('')
   const [showNewFolderDialog, setShowNewFolderDialog] = useState(false)
   const [newFolderName, setNewFolderName] = useState('')
   const sentinelRef = useRef<HTMLDivElement | null>(null)
-
-  const filteredFiles = files.filter((file) =>
-    file.name.toLowerCase().includes(searchQuery.toLowerCase())
-  )
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize))
 
@@ -216,7 +215,7 @@ export function FileList({
             </tr>
           </thead>
           <tbody>
-            {filteredFiles.map((file) => (
+            {files.map((file) => (
               <tr key={file.id} className="border-t transition-colors hover:bg-muted/40">
                 <td className="px-2 py-1.5 sm:px-3">
                   <button
@@ -321,7 +320,7 @@ export function FileList({
   const renderGrid = () => (
     <div className="space-y-2">
       <div className="grid grid-cols-1 gap-4 min-[420px]:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-        {filteredFiles.map((file) => (
+        {files.map((file) => (
           <FileCard
             key={file.id}
             file={file}
@@ -360,7 +359,7 @@ export function FileList({
             <Input
               placeholder="搜索文件..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => onSearchQueryChange(e.target.value)}
               className="pl-9"
             />
           </div>
@@ -399,7 +398,7 @@ export function FileList({
       {/* 文件列表 */}
       {loading && files.length === 0 ? (
         <div className="py-12 text-center text-muted-foreground">加载中...</div>
-      ) : filteredFiles.length > 0 ? (
+      ) : files.length > 0 ? (
         viewMode === 'grid' ? (
           renderGrid()
         ) : (
@@ -407,7 +406,7 @@ export function FileList({
         )
       ) : (
         <div className="text-center py-12 text-muted-foreground">
-          <p>{searchQuery ? '没有匹配的文件' : '暂无文件'}</p>
+          <p>{searchQuery ? '没有找到匹配的文件' : '暂无文件'}</p>
           <p className="text-sm">
             {searchQuery ? '试试其他关键词' : '上传文件或创建文件夹开始使用'}
           </p>

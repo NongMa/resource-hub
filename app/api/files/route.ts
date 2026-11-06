@@ -41,9 +41,13 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: '用户不存在' }, { status: 404 })
     }
 
+    // 搜索关键词：按文件名包含匹配，仅在当前文件夹内生效；q 为空时行为不变
+    const q = (searchParams.get('q') || '').trim()
+
     const where = {
       userId: user.id,
       folderId: folderId || null,
+      ...(q ? { name: { contains: q, mode: 'insensitive' as const } } : {}),
     }
 
     // createdAt 可能相同，追加 id 作为次级排序，避免分页漏条/重条

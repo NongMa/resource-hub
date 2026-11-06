@@ -26,6 +26,8 @@ export default function DashboardPage() {
   const router = useRouter()
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null)
   const [files, setFiles] = useState<FileItem[]>([])
+  const [searchInput, setSearchInput] = useState('')
+  const [searchQuery, setSearchQuery] = useState('')
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
@@ -58,6 +60,9 @@ export default function DashboardPage() {
         if (currentFolderId) {
           url.searchParams.set('folderId', currentFolderId)
         }
+        if (searchQuery) {
+          url.searchParams.set('q', searchQuery)
+        }
 
         const res = await fetch(url.toString())
         if (!res.ok) return
@@ -84,10 +89,19 @@ export default function DashboardPage() {
         }
       }
     },
-    [currentFolderId, pageSize]
+    [currentFolderId, pageSize, searchQuery]
   )
 
-  // 目录 / 每页条数 / 视图切换时重置到第一页
+  // 输入防抖 300ms：停止输入后再发起服务端搜索
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearchQuery(searchInput.trim())
+    }, 300)
+
+    return () => clearTimeout(timer)
+  }, [searchInput])
+
+  // 目录 / 每页条数 / 视图切换 / 搜索条件变化时重置到第一页
   useEffect(() => {
     if (status === 'authenticated') {
       loadFiles(1)
@@ -204,6 +218,8 @@ export default function DashboardPage() {
           pageSize={pageSize}
           viewMode={viewMode}
           folderId={currentFolderId}
+          searchQuery={searchInput}
+          onSearchQueryChange={setSearchInput}
           onCreateFolder={handleCreateFolder}
           onRefresh={reload}
           onViewModeChange={setViewMode}
