@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcryptjs'
+import { clearLoginAttempts } from '@/lib/login-guard'
 import { consumeEmailCode, isValidEmail, normalizeEmail } from '@/lib/email-verification'
 import type { EmailCodeStatus } from '@/lib/email-verification'
 
@@ -87,6 +88,9 @@ export async function POST(request: NextRequest) {
         sessionVersion: { increment: 1 },
       },
     })
+
+    // 重置已证明邮箱归属：清掉旧的失败计数与锁定，避免用新密码登录时仍被拦截
+    await clearLoginAttempts(tx, normalizedEmail)
 
     return { status: 'ok' as const }
   })

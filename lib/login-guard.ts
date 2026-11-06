@@ -329,6 +329,19 @@ export async function attemptLogin(input: {
 
 /* ------------------------------ 登录票据 ------------------------------ */
 
+/**
+ * 清除该邮箱的失败计数与锁定状态。
+ * 密码重置已证明邮箱归属，旧的失败记录不应继续拦截合法登录。
+ */
+export async function clearLoginAttempts(
+  db: Prisma.TransactionClient | PrismaClient,
+  email: string
+): Promise<void> {
+  await db.$executeRaw`
+    DELETE FROM "login_attempts" WHERE "emailHash" = ${emailIdentifier(email)}
+  `
+}
+
 type DbClient = Prisma.TransactionClient | PrismaClient
 
 function buildTicket(email: string): { ticket: string; expiresAt: number } {
