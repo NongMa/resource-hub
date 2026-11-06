@@ -21,6 +21,9 @@ interface FileCardFile {
   mimeType: string
   createdAt: string
   url: string
+  thumbnailUrl?: string
+  previewUrl?: string
+  smallUrl?: string
 }
 
 interface FileCardProps {
@@ -62,8 +65,10 @@ export function FileCard({ file, onPreview, onShare, onDelete, onRename }: FileC
       <div className="aspect-square flex items-center justify-center bg-muted/50 p-4">
         {fileType === 'image' && !imageError ? (
           <img
-            src={file.url}
+            src={file.thumbnailUrl ?? file.url}
             alt={file.name}
+            loading="lazy"
+            decoding="async"
             className="max-h-full max-w-full object-contain"
             onError={() => setImageError(true)}
           />

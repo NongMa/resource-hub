@@ -25,6 +25,9 @@ interface FileListProps {
     mimeType: string
     createdAt: string
     url: string
+    thumbnailUrl?: string
+    previewUrl?: string
+    smallUrl?: string
   }>
   folderId?: string | null
   onCreateFolder: (name: string, parentId?: string) => void

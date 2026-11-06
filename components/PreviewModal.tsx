@@ -15,11 +15,27 @@ interface PreviewModalProps {
     size: number
     mimeType: string
     url: string
+    thumbnailUrl?: string
+    previewUrl?: string
+    smallUrl?: string
   } | null
 }
 
+type ImageVersion = 'original' | 'slim' | 'small'
+
 export function PreviewModal({ open, onOpenChange, file }: PreviewModalProps) {
   const [imageError, setImageError] = useState(false)
+  const [imageVersion, setImageVersion] = useState<ImageVersion>('slim')
+
+  // 切换文件时回到默认的瘦身版
+  useEffect(() => {
+    setImageVersion('slim')
+  }, [file?.id])
+
+  // 切换版本或文件时重置加载失败状态
+  useEffect(() => {
+    setImageError(false)
+  }, [file?.id, imageVersion])
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -44,6 +60,21 @@ export function PreviewModal({ open, onOpenChange, file }: PreviewModalProps) {
   const fileType = getFileType(file.mimeType)
   const fileUrl = file.url
 
+  // 图片预览默认走瘦身版，可切换原图 / 更小尺寸；非图片始终用原图地址
+  const versionUrls: Record<ImageVersion, string> = {
+    original: file.url,
+    slim: file.previewUrl ?? file.url,
+    small: file.smallUrl ?? file.url,
+  }
+  const imageUrl = versionUrls[imageVersion]
+  const hasImageVariants = fileType === 'image' && !!file.previewUrl
+
+  const versionOptions: Array<{ key: ImageVersion; label: string }> = [
+    { key: 'original', label: '原图' },
+    ...(file.previewUrl ? [{ key: 'slim' as const, label: '瘦身' }] : []),
+    ...(file.smallUrl ? [{ key: 'small' as const, label: '更小' }] : []),
+  ]
+
   const handleDownload = () => {
     const link = document.createElement('a')
     link.href = fileUrl
@@ -60,7 +91,7 @@ export function PreviewModal({ open, onOpenChange, file }: PreviewModalProps) {
               <p className="text-muted-foreground">无法加载图片</p>
             ) : (
               <img
-                src={fileUrl}
+                src={imageUrl}
                 alt={file.name}
                 className="max-w-full max-h-[70vh] object-contain"
                 onError={() => setImageError(true)}
@@ -120,7 +151,27 @@ export function PreviewModal({ open, onOpenChange, file }: PreviewModalProps) {
             <h2 className="text-lg font-semibold truncate">{file.name}</h2>
             <p className="text-sm text-muted-foreground">{formatFileSize(file.size)}</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {hasImageVariants && (
+              <div
+                className="flex items-center rounded-md border p-0.5"
+                role="group"
+                aria-label="图片版本"
+              >
+                {versionOptions.map((option) => (
+                  <Button
+                    key={option.key}
+                    variant={imageVersion === option.key ? 'secondary' : 'ghost'}
+                    size="sm"
+                    className="h-7 px-2 text-xs"
+                    aria-pressed={imageVersion === option.key}
+                    onClick={() => setImageVersion(option.key)}
+                  >
+                    {option.label}
+                  </Button>
+                ))}
+              </div>
+            )}
             <Button variant="outline" size="sm" onClick={handleDownload}>
               <Download className="h-4 w-4 mr-1" />
               下载

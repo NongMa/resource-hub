@@ -16,6 +16,9 @@ interface FileItem {
   mimeType: string
   createdAt: string
   url: string
+  thumbnailUrl?: string
+  previewUrl?: string
+  smallUrl?: string
 }
 
 export default function DashboardPage() {
