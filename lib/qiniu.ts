@@ -24,7 +24,7 @@ const uploadHosts = {
   z1: 'https://up-z1.qiniup.com',
   z2: 'https://up-z2.qiniup.com',
   na0: 'https://up-na0.qiniup.com',
-  as0: 'https://upload-as0.qiniup.com',
+  as0: 'https://up-as0.qiniup.com',
 } as const
 
 // 配置项
