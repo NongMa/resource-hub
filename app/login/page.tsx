@@ -82,7 +82,7 @@ export default function LoginPage() {
       const result = await signIn('credentials', {
         email,
         password,
-        loginToken: data.loginToken,
+        loginTicket: data.loginToken,
         redirect: false,
       })
 
