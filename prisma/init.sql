@@ -5,6 +5,7 @@ CREATE TABLE "users" (
     "name" TEXT,
     "password" TEXT,
     "image" TEXT,
+    "sessionVersion" INTEGER NOT NULL DEFAULT 0,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -103,3 +104,37 @@ CREATE INDEX "login_attempts_updatedAt_idx" ON "login_attempts"("updatedAt");
 
 -- CreateIndex
 CREATE INDEX "login_captchas_expiresAt_idx" ON "login_captchas"("expiresAt");
+
+-- CreateTable
+CREATE TABLE "email_verification_codes" (
+    "id" TEXT NOT NULL,
+    "emailHash" TEXT NOT NULL,
+    "codeHash" TEXT NOT NULL,
+    "purpose" TEXT NOT NULL DEFAULT 'register',
+    "expiresAt" TIMESTAMP(3) NOT NULL,
+    "usedAt" TIMESTAMP(3),
+    "ipHash" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "email_verification_codes_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateIndex
+CREATE INDEX "email_verification_codes_emailHash_purpose_createdAt_idx" ON "email_verification_codes"("emailHash", "purpose", "createdAt");
+
+-- CreateIndex
+CREATE INDEX "email_verification_codes_expiresAt_idx" ON "email_verification_codes"("expiresAt");
+
+-- CreateTable
+CREATE TABLE "email_notice_counters" (
+    "keyType" TEXT NOT NULL,
+    "keyHash" TEXT NOT NULL,
+    "windowStart" TIMESTAMP(3) NOT NULL,
+    "count" INTEGER NOT NULL DEFAULT 0,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "email_notice_counters_pkey" PRIMARY KEY ("keyType", "keyHash", "windowStart")
+);
+
+-- CreateIndex
+CREATE INDEX "email_notice_counters_windowStart_idx" ON "email_notice_counters"("windowStart");

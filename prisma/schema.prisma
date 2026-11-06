@@ -13,6 +13,7 @@ model User {
   name      String?
   password  String?
   image     String?
+  sessionVersion Int @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   files     File[]
@@ -82,7 +83,36 @@ model LoginAttempt {
   @@map("login_attempts")
 }
 
-/// 图形验证码消费状态（tokenHash 为 captchaId 的不可逆标识）
+// 邮箱验证码：按场景（register / reset）区分，摘要存储，一次性消费
+model EmailVerificationCode {
+  id        String    @id @default(cuid())
+  emailHash String
+  codeHash  String
+  purpose   String    @default("register")
+  expiresAt DateTime
+  usedAt    DateTime?
+  ipHash    String?
+  createdAt DateTime  @default(now())
+
+  @@index([emailHash, purpose, createdAt])
+  @@index([expiresAt])
+  @@map("email_verification_codes")
+}
+
+/// 引导邮件限流计数：按时间窗（60 秒 / 1 小时）原子累加，主键保证并发下不超发
+model EmailNoticeCounter {
+  keyType     String   // email / ip
+  keyHash     String   // 带密钥 HMAC，不存明文
+  windowStart DateTime
+  count       Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  @@id([keyType, keyHash, windowStart])
+  @@index([windowStart])
+  @@map("email_notice_counters")
+}
+
+// 图形验证码与一次性登录票据的消费状态（tokenHash 为令牌的不可逆标识）
 model LoginCaptcha {
   tokenHash String    @id
   expiresAt DateTime
