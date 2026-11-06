@@ -89,7 +89,7 @@ export default function SharePage() {
       case 'document':
         return <FileText className="h-16 w-16 text-blue-500" />
       default:
-        return <File className="h-16 w-16 text-gray-500" />
+        return <File className="h-16 w-16 text-muted-foreground" />
     }
   }
 
@@ -101,7 +101,7 @@ export default function SharePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-4">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/60 p-4">
       <div className="max-w-2xl mx-auto">
         <Button variant="ghost" className="mb-4" onClick={() => router.push('/login')}>
           <ArrowLeft className="h-4 w-4 mr-2" />

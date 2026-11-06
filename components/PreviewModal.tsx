@@ -55,7 +55,7 @@ export function PreviewModal({ open, onOpenChange, file }: PreviewModalProps) {
     switch (fileType) {
       case 'image':
         return (
-          <div className="flex items-center justify-center bg-black/5 rounded-lg min-h-[300px]">
+          <div className="flex items-center justify-center rounded-lg bg-muted/40 min-h-[300px]">
             {imageError ? (
               <p className="text-muted-foreground">无法加载图片</p>
             ) : (
@@ -107,15 +107,15 @@ export function PreviewModal({ open, onOpenChange, file }: PreviewModalProps) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-0 sm:p-4"
       onClick={() => onOpenChange(false)}
     >
       <div
-        className="relative w-full max-w-4xl mx-4 bg-background rounded-lg shadow-xl animate-fade-in"
+        className="relative flex max-h-[100dvh] w-full max-w-4xl flex-col overflow-y-auto rounded-none bg-background shadow-xl animate-fade-in sm:max-h-[90dvh] sm:rounded-lg"
         onClick={(e) => e.stopPropagation()}
       >
         {/* 头部 */}
-        <div className="flex items-center justify-between p-4 border-b">
+        <div className="flex flex-wrap items-center justify-between gap-2 p-4 border-b">
           <div className="min-w-0 flex-1 mr-4">
             <h2 className="text-lg font-semibold truncate">{file.name}</h2>
             <p className="text-sm text-muted-foreground">{formatFileSize(file.size)}</p>

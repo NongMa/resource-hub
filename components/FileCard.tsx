@@ -46,7 +46,7 @@ export function FileCard({ file, onPreview, onShare, onDelete, onRename }: FileC
       case 'document':
         return <FileText className="h-12 w-12 text-blue-500" />
       default:
-        return <File className="h-12 w-12 text-gray-500" />
+        return <File className="h-12 w-12 text-muted-foreground" />
     }
   }
 

@@ -79,7 +79,7 @@ export function FileList({
             />
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button variant="outline" size="sm" onClick={() => setShowNewFolderDialog(true)}>
             <FolderPlus className="h-4 w-4 mr-1" />
             新建文件夹
@@ -108,7 +108,7 @@ export function FileList({
 
       {/* 文件列表 */}
       {filteredFiles.length > 0 ? (
-        <div className={cn('grid gap-4', viewMode === 'grid' ? 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5' : '')}>
+        <div className={cn('grid gap-4', viewMode === 'grid' ? 'grid-cols-1 min-[420px]:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5' : '')}>
           {filteredFiles.map((file) => (
             <FileCard
               key={file.id}

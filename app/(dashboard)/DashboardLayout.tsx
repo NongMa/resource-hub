@@ -10,11 +10,12 @@ import {
   Settings,
   LogOut,
   User,
-  ChevronRight,
-  Plus,
+  Menu,
+  X,
   Trash2,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { ThemeToggle } from '@/components/ThemeToggle'
 import { cn } from '@/lib/utils'
 
 interface FolderItem {
@@ -39,6 +40,17 @@ export function DashboardLayout({
   const [folders, setFolders] = useState<FolderItem[]>([])
   const [loading, setLoading] = useState(true)
   const [folderError, setFolderError] = useState('')
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+
+  // 移动端抽屉：Esc 关闭
+  useEffect(() => {
+    if (!sidebarOpen) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setSidebarOpen(false)
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [sidebarOpen])
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -106,24 +118,76 @@ export function DashboardLayout({
     return null
   }
 
+  const handleNavigate = (folderId: string | null) => {
+    onNavigateToFolder(folderId)
+    setSidebarOpen(false)
+  }
+
   const rootFolders = folders.filter((f) => !f.parentId)
 
   return (
     <div className="min-h-screen flex">
-      {/* 侧边栏 */}
-      <aside className="w-64 border-r bg-card flex flex-col">
+      {/* 移动端顶栏 */}
+      <header className="fixed inset-x-0 top-0 z-30 flex h-14 items-center justify-between gap-2 border-b bg-background/95 px-3 backdrop-blur lg:hidden">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => setSidebarOpen(true)}
+          aria-label="打开侧边栏"
+          title="打开侧边栏"
+          aria-expanded={sidebarOpen}
+          aria-controls="app-sidebar"
+        >
+          <Menu className="h-5 w-5" />
+        </Button>
+        <span className="flex min-w-0 items-center gap-2 text-sm font-semibold">
+          <Folder className="h-5 w-5 shrink-0 text-primary" />
+          <span className="truncate">ResourceHub</span>
+        </span>
+        <ThemeToggle />
+      </header>
+
+      {/* 抽屉遮罩 */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* 侧边栏：窄屏为抽屉，宽屏固定 */}
+      <aside
+        id="app-sidebar"
+        className={cn(
+          'fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r bg-card transition-transform duration-200 ease-out lg:static lg:z-auto lg:translate-x-0',
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        )}
+      >
         <div className="p-4 border-b">
-          <h1 className="text-xl font-bold flex items-center gap-2">
-            <Folder className="h-6 w-6 text-primary" />
-            ResourceHub
-          </h1>
+          <div className="flex items-center justify-between gap-2">
+            <h1 className="text-xl font-bold flex items-center gap-2">
+              <Folder className="h-6 w-6 text-primary" />
+              ResourceHub
+            </h1>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 lg:hidden"
+              onClick={() => setSidebarOpen(false)}
+              aria-label="关闭侧边栏"
+              title="关闭侧边栏"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
 
-        <nav className="flex-1 p-4 space-y-2">
+        <nav className="flex-1 space-y-2 overflow-y-auto p-4">
           <Button
             variant={currentFolderId === null ? 'secondary' : 'ghost'}
             className="w-full justify-start"
-            onClick={() => onNavigateToFolder(null)}
+            onClick={() => handleNavigate(null)}
           >
             <Home className="h-4 w-4 mr-2" />
             我的文件
@@ -142,7 +206,7 @@ export function DashboardLayout({
                     <Button
                       variant={currentFolderId === folder.id ? 'secondary' : 'ghost'}
                       className="w-full justify-start"
-                      onClick={() => onNavigateToFolder(folder.id)}
+                      onClick={() => handleNavigate(folder.id)}
                     >
                       <FolderOpen className="h-4 w-4 mr-2 shrink-0" />
                       <span className="truncate">{folder.name}</span>
@@ -192,16 +256,19 @@ export function DashboardLayout({
               <p className="text-xs text-muted-foreground truncate">{session.user?.email}</p>
             </div>
           </div>
-          <Button variant="outline" className="w-full" onClick={handleSignOut}>
-            <LogOut className="h-4 w-4 mr-2" />
-            退出登录
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" className="flex-1" onClick={handleSignOut}>
+              <LogOut className="h-4 w-4 mr-2" />
+              退出登录
+            </Button>
+            <ThemeToggle />
+          </div>
         </div>
       </aside>
 
       {/* 主内容区 */}
-      <main className="flex-1 overflow-auto">
-        <div className="p-6">{children}</div>
+      <main className="min-w-0 flex-1 overflow-x-hidden">
+        <div className="p-4 pt-20 sm:p-6 lg:pt-6">{children}</div>
       </main>
     </div>
   )

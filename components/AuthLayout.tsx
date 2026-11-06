@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { ThemeToggle } from '@/components/ThemeToggle'
 
 export const authCardClass =
   'auth-card-in w-full max-w-md border-border/60 bg-card/85 shadow-2xl shadow-primary/10 backdrop-blur-md supports-[backdrop-filter]:bg-card/65'
@@ -74,6 +75,10 @@ export function AuthLayout({ children }: { children: ReactNode }) {
         <div className="auth-breathe absolute -bottom-24 left-1/3 h-64 w-64 rounded-full bg-indigo-400/15 blur-3xl" />
         <div className="auth-noise absolute inset-0 opacity-[0.035]" />
         <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-background/70 to-transparent" />
+      </div>
+
+      <div className="absolute right-4 top-4 z-10 sm:right-6 sm:top-6">
+        <ThemeToggle className="bg-card/70 backdrop-blur-md" />
       </div>
 
       <div className="relative flex min-h-screen flex-col items-center justify-center gap-6 px-4 py-10 sm:px-6">
