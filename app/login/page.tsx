@@ -184,6 +184,11 @@ export default function LoginPage() {
               注册
             </Link>
           </div>
+          <div className="mt-2 text-center text-sm text-muted-foreground">
+            <Link href="/forgot-password" className={authLinkClass}>
+              忘记密码?
+            </Link>
+          </div>
         </CardContent>
       </Card>
     </AuthLayout>

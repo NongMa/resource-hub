@@ -8,6 +8,7 @@ import { CircleAlert } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { EmailCodeField } from '@/components/EmailCodeField'
 import {
   AuthLayout,
   authCardClass,
@@ -26,6 +27,7 @@ export default function RegisterPage() {
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [inviteCode, setInviteCode] = useState('')
+  const [emailCode, setEmailCode] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -49,13 +51,23 @@ export default function RegisterPage() {
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password, inviteCode: inviteCode.trim() }),
+        body: JSON.stringify({
+          name,
+          email,
+          password,
+          inviteCode: inviteCode.trim(),
+          emailCode: emailCode.trim(),
+        }),
       })
 
       const data = await res.json()
 
       if (!res.ok) {
-        setError(data.error || '注册失败')
+        setError(
+          res.status === 409
+            ? '该邮箱已被注册，请直接登录，或使用「忘记密码」重置密码'
+            : data.error || '注册失败'
+        )
         return
       }
 
@@ -140,6 +152,24 @@ export default function RegisterPage() {
                 className={authInputClass}
               />
             </div>
+            <EmailCodeField
+              purpose="register"
+              email={email}
+              value={emailCode}
+              onChange={setEmailCode}
+              onError={setError}
+              invalid={!!error}
+            />
+            <p className="text-xs text-muted-foreground">
+              该邮箱已注册？请直接{' '}
+              <Link href="/login" className={authLinkClass}>
+                登录
+              </Link>
+              ，或使用{' '}
+              <Link href="/forgot-password" className={authLinkClass}>
+                忘记密码
+              </Link>
+            </p>
             <div className="space-y-2">
               <Input
                 type="password"

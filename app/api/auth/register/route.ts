@@ -3,8 +3,29 @@ import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcryptjs'
 import { createHash, timingSafeEqual } from 'crypto'
 import { attemptLogin } from '@/lib/login-guard'
+import { consumeEmailCode } from '@/lib/email-verification'
+import type { EmailCodeStatus } from '@/lib/email-verification'
 
 const prisma = new PrismaClient()
+
+/** 邮箱验证码失败原因到 HTTP 错误码的映射 */
+function emailCodeError(status: Exclude<EmailCodeStatus, 'ok'>) {
+  switch (status) {
+    case 'missing':
+      return { status: 400, body: { error: '请输入邮箱验证码', code: 'EMAIL_CODE_REQUIRED' } }
+    case 'invalid':
+      return { status: 400, body: { error: '邮箱验证码不正确', code: 'EMAIL_CODE_INVALID' } }
+    case 'used':
+      return { status: 400, body: { error: '邮箱验证码已使用，请重新获取', code: 'EMAIL_CODE_USED' } }
+    case 'expired':
+    case 'not_found':
+    default:
+      return {
+        status: 400,
+        body: { error: '邮箱验证码已过期，请重新获取', code: 'EMAIL_CODE_EXPIRED' },
+      }
+  }
+}
 
 /** 读取 .env 中逗号分隔的授权码，允许配置多个 */
 function getInviteCodes(): string[] {
@@ -23,7 +44,7 @@ function safeEqual(a: string, b: string): boolean {
 
 export async function POST(request: NextRequest) {
   try {
-    const { name, email, password, inviteCode } = await request.json()
+    const { name, email, password, inviteCode, emailCode } = await request.json()
 
     if (!email || !password) {
       return NextResponse.json({ error: '邮箱和密码不能为空' }, { status: 400 })
@@ -62,14 +83,30 @@ export async function POST(request: NextRequest) {
     // 加密密码
     const hashedPassword = await bcrypt.hash(password, 12)
 
-    // 创建用户
-    const user = await prisma.user.create({
-      data: {
-        name: name || email.split('@')[0],
-        email,
-        password: hashedPassword,
-      },
+    // 邮箱验证码必须是服务端签发并校验；校验与建号放在同一事务，失败则回滚消费
+    const result = await prisma.$transaction(async (tx) => {
+      const status = await consumeEmailCode(tx, email, 'register', emailCode)
+      if (status !== 'ok') {
+        return { status }
+      }
+
+      const createdUser = await tx.user.create({
+        data: {
+          name: name || email.split('@')[0],
+          email,
+          password: hashedPassword,
+        },
+      })
+
+      return { status: 'ok' as const, user: createdUser }
     })
+
+    if (result.status !== 'ok') {
+      const mapped = emailCodeError(result.status)
+      return NextResponse.json(mapped.body, { status: mapped.status })
+    }
+
+    const user = result.user
 
     // 与登录同源：走同一套验证码 / 限流 / 密码校验，通过后才签发一次性票据。
     // 新账号通常等价于「第一次尝试」，不需要验证码；但若该邮箱此前已有失败记录或被锁定，则不会签发票据。
