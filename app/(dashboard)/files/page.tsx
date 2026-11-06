@@ -146,20 +146,27 @@ export default function DashboardPage() {
     alert('重命名功能开发中')
   }
 
-  const handleShare = async (fileId: string, expiresIn: number | null) => {
+  const handleShare = async (
+    fileId: string,
+    expiresIn: number | null
+  ): Promise<{ url: string } | null> => {
     try {
       const res = await fetch('/api/share', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ fileId, expiresIn }),
       })
-      if (res.ok) {
-        const data = await res.json()
-        // 显示分享链接
-        alert(`分享链接: ${data.url}`)
+      if (!res.ok) {
+        console.error('Share error:', res.status)
+        return null
       }
+
+      const data = await res.json()
+      // 由分享弹层展示服务端返回的真实链接
+      return data.url ? { url: data.url as string } : null
     } catch (error) {
       console.error('Share error:', error)
+      return null
     }
   }
 

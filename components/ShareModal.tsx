@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { Link2, Check, Clock } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Link2, Check, CircleAlert, Clock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -22,22 +22,44 @@ interface ShareModalProps {
     id: string
     name: string
   } | null
-  onShare: (fileId: string, expiresIn: number | null) => void
+  onShare: (fileId: string, expiresIn: number | null) => Promise<{ url: string } | null>
 }
 
 export function ShareModal({ open, onOpenChange, file, onShare }: ShareModalProps) {
   const [shareLink, setShareLink] = useState('')
   const [expiresIn, setExpiresIn] = useState<number | null>(null)
   const [copied, setCopied] = useState(false)
+  const [creating, setCreating] = useState(false)
+  const [error, setError] = useState('')
 
-  const handleShare = () => {
+  // 关闭或切换文件后重置，避免残留上一个文件的链接
+  useEffect(() => {
+    if (!open) {
+      setShareLink('')
+      setCopied(false)
+      setError('')
+    }
+  }, [open])
+
+  const handleShare = async () => {
     if (!file) return
 
-    onShare(file.id, expiresIn)
+    setError('')
+    setCreating(true)
 
-    // 生成模拟的分享链接（实际应从API获取）
-    const link = `${window.location.origin}/share/${Date.now().toString(36)}`
-    setShareLink(link)
+    try {
+      // 链接必须用服务端签发并入库的 token，不能用本地拼造的假 token
+      const result = await onShare(file.id, expiresIn)
+      if (!result?.url) {
+        setError('生成分享链接失败，请稍后重试')
+        return
+      }
+      setShareLink(result.url)
+    } catch {
+      setError('生成分享链接失败，请稍后重试')
+    } finally {
+      setCreating(false)
+    }
   }
 
   const handleCopy = async () => {
@@ -63,6 +85,15 @@ export function ShareModal({ open, onOpenChange, file, onShare }: ShareModalProp
         </DialogHeader>
 
         <div className="space-y-4 py-4">
+          {error && (
+            <div
+              role="alert"
+              className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+            >
+              <CircleAlert className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+              <span>{error}</span>
+            </div>
+          )}
           {!shareLink ? (
             <>
               <div className="space-y-2">
@@ -99,8 +130,8 @@ export function ShareModal({ open, onOpenChange, file, onShare }: ShareModalProp
 
         <DialogFooter>
           {!shareLink ? (
-            <Button onClick={handleShare} disabled={!file}>
-              生成分享链接
+            <Button onClick={() => void handleShare()} disabled={!file || creating}>
+              {creating ? '生成中...' : '生成分享链接'}
             </Button>
           ) : (
             <Button variant="outline" onClick={() => { setShareLink(''); onOpenChange(false); }}>
