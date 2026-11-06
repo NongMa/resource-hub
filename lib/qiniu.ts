@@ -1,4 +1,5 @@
 import qiniu from 'qiniu'
+import crypto from 'node:crypto'
 
 const accessKey = process.env.QINIU_ACCESS_KEY || ''
 const secretKey = process.env.QINIU_SECRET_KEY || ''
@@ -75,6 +76,75 @@ export function getPrivateUrl(key: string, expires: number = 3600): string {
  */
 export function getFileUrl(key: string): string {
   return getPrivateUrl(key)
+}
+
+/**
+ * 图片处理参数（七牛图片处理，实时生效，不落库）
+ * - 缩略图：限定长边 400，避免小图被放大
+ * - 瘦身：保持原尺寸，仅降低质量
+ * - 小尺寸：限定长边 1000，用于预览的“更小”档
+ */
+export const IMAGE_THUMBNAIL_PARAMS = 'imageView2/1/w/400/h/400'
+export const IMAGE_SLIM_PARAMS = 'imageMogr2/quality/75'
+export const IMAGE_SMALL_PARAMS = 'imageView2/1/w/1000/h/1000'
+
+/**
+ * 生成带图片处理参数的私有空间签名 URL
+ *
+ * 注意：处理参数必须参与签名（即对「路径?参数&e=deadline」整体做 HMAC），
+ * 追加到已签名 URL 之后会被七牛忽略并返回原图。此处为纯本地计算，不发起网络请求。
+ */
+export function getPrivateUrlWithParams(
+  key: string,
+  params: string,
+  expires: number = 3600
+): string {
+  const deadline = Math.ceil(Date.now() / 1000) + expires
+  const baseUrl = bucketManager.publicDownloadUrl(`https://${domain}`, key)
+  const signedUrl = `${baseUrl}?${params}&e=${deadline}`
+  const signature = crypto
+    .createHmac('sha1', secretKey)
+    .update(signedUrl)
+    .digest('base64')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+
+  return `${signedUrl}&token=${accessKey}:${signature}`
+}
+
+/**
+ * 可作为七牛图片处理输入的格式（SVG 等矢量格式不支持，避免缩略图加载失败）
+ */
+const PROCESSABLE_IMAGE_MIME_TYPES = new Set([
+  'image/jpeg',
+  'image/jpg',
+  'image/png',
+  'image/gif',
+  'image/webp',
+  'image/bmp',
+  'image/tiff',
+])
+
+export function isProcessableImage(mimeType: string): boolean {
+  return PROCESSABLE_IMAGE_MIME_TYPES.has(mimeType.toLowerCase())
+}
+
+/**
+ * 列表缩略图地址（仅图片使用）
+ */
+export function getThumbnailUrl(key: string): string {
+  return getPrivateUrlWithParams(key, IMAGE_THUMBNAIL_PARAMS)
+}
+
+/**
+ * 预览用图片地址
+ * @param variant slim 瘦身（原尺寸降质量） | small 更小尺寸
+ */
+export function getPreviewImageUrl(key: string, variant: 'slim' | 'small'): string {
+  return getPrivateUrlWithParams(
+    key,
+    variant === 'slim' ? IMAGE_SLIM_PARAMS : IMAGE_SMALL_PARAMS
+  )
 }
 
 /**
