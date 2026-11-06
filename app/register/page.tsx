@@ -25,6 +25,7 @@ export default function RegisterPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const [inviteCode, setInviteCode] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -48,7 +49,7 @@ export default function RegisterPage() {
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password }),
+        body: JSON.stringify({ name, email, password, inviteCode: inviteCode.trim() }),
       })
 
       const data = await res.json()
@@ -89,6 +90,19 @@ export default function RegisterPage() {
                 <span>{error}</span>
               </div>
             )}
+            <div className="space-y-2">
+              <Input
+                type="text"
+                placeholder="授权码"
+                value={inviteCode}
+                onChange={(e) => setInviteCode(e.target.value)}
+                required
+                autoComplete="off"
+                spellCheck={false}
+                aria-invalid={!!error}
+                className={authInputClass}
+              />
+            </div>
             <div className="space-y-2">
               <Input
                 type="text"
