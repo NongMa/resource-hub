@@ -2,7 +2,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { PrismaClient } from '@prisma/client'
-import { deleteFile as deleteQiniuFile, getFileUrl } from '@/lib/qiniu'
+import {
+  deleteFile as deleteQiniuFile,
+  getFileUrl,
+  getThumbnailUrl,
+  getPreviewImageUrl,
+  isProcessableImage,
+} from '@/lib/qiniu'
 import { isKeyOwnedByUser } from '@/lib/fileKey'
 
 const prisma = new PrismaClient()
@@ -35,7 +41,21 @@ export async function GET(request: NextRequest) {
     })
 
     return NextResponse.json(
-      files.map((file) => ({ ...file, url: getFileUrl(file.key) }))
+      files.map((file) => {
+        const base = { ...file, url: getFileUrl(file.key) }
+
+        // 仅图片下发处理后的地址；签名在本地计算，不产生额外网络请求
+        if (!isProcessableImage(file.mimeType)) {
+          return base
+        }
+
+        return {
+          ...base,
+          thumbnailUrl: getThumbnailUrl(file.key),
+          previewUrl: getPreviewImageUrl(file.key, 'slim'),
+          smallUrl: getPreviewImageUrl(file.key, 'small'),
+        }
+      })
     )
   } catch (error) {
     console.error('Get files error:', error)
