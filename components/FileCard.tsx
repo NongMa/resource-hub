@@ -21,6 +21,7 @@ interface FileCardFile {
   mimeType: string
   createdAt: string
   url: string
+  downloadUrl?: string
   thumbnailUrl?: string
   previewUrl?: string
   smallUrl?: string
@@ -54,8 +55,9 @@ export function FileCard({ file, onPreview, onShare, onDelete, onRename }: FileC
   }
 
   const handleDownload = () => {
+    // downloadUrl 已带 attname，点击即由七牛返回 attachment，避免浏览器内联预览
     const link = document.createElement('a')
-    link.href = file.url
+    link.href = file.downloadUrl ?? file.url
     link.download = file.name
     link.click()
   }

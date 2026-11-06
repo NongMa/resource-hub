@@ -148,6 +148,18 @@ export function getPreviewImageUrl(key: string, variant: 'slim' | 'small'): stri
 }
 
 /**
+ * 生成强制下载地址（私有空间）
+ *
+ * 七牛的 attname 参数会让响应带上 Content-Disposition: attachment，
+ * 该参数必须和图片处理参数一样参与签名，追加在签名之后会被忽略并回退为 inline。
+ * 文件名用 encodeURIComponent 编码：中文由七牛以 RFC 5987 的 filename* 下发，
+ * 现代浏览器优先采用 filename*，因此保存下来的文件名不会是乱码。
+ */
+export function getDownloadUrl(key: string, name: string, expires: number = 3600): string {
+  return getPrivateUrlWithParams(key, `attname=${encodeURIComponent(name)}`, expires)
+}
+
+/**
  * 删除七牛云文件
  */
 export function deleteFile(key: string): Promise<void> {

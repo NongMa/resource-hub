@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { PrismaClient } from '@prisma/client'
 import { generateShareToken } from '@/lib/utils'
-import { getFileUrl } from '@/lib/qiniu'
+import { getFileUrl, getDownloadUrl } from '@/lib/qiniu'
 
 const prisma = new PrismaClient()
 
@@ -86,7 +86,11 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       ...share,
-      file: { ...share.file, url: getFileUrl(share.file.key) },
+      file: {
+        ...share.file,
+        url: getFileUrl(share.file.key),
+        downloadUrl: getDownloadUrl(share.file.key, share.file.name),
+      },
     })
   } catch (error) {
     console.error('Get share error:', error)

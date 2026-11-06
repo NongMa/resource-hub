@@ -15,6 +15,7 @@ interface PreviewModalProps {
     size: number
     mimeType: string
     url: string
+    downloadUrl?: string
     thumbnailUrl?: string
     previewUrl?: string
     smallUrl?: string
@@ -76,8 +77,9 @@ export function PreviewModal({ open, onOpenChange, file }: PreviewModalProps) {
   ]
 
   const handleDownload = () => {
+    // 预览用 url（可内联展示），下载必须用带 attname 的 downloadUrl
     const link = document.createElement('a')
-    link.href = fileUrl
+    link.href = file.downloadUrl ?? fileUrl
     link.download = file.name
     link.click()
   }

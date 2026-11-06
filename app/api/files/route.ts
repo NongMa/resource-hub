@@ -5,6 +5,7 @@ import { PrismaClient } from '@prisma/client'
 import {
   deleteFile as deleteQiniuFile,
   getFileUrl,
+  getDownloadUrl,
   getThumbnailUrl,
   getPreviewImageUrl,
   isProcessableImage,
@@ -58,7 +59,12 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       files: files.map((file) => {
-        const base = { ...file, url: getFileUrl(file.key) }
+        // url 用于预览（内联展示），downloadUrl 带 attname 用于强制下载
+        const base = {
+          ...file,
+          url: getFileUrl(file.key),
+          downloadUrl: getDownloadUrl(file.key, file.name),
+        }
 
         // 仅图片下发处理后的地址；签名在本地计算，不产生额外网络请求
         if (!isProcessableImage(file.mimeType)) {

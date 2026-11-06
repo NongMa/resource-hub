@@ -18,6 +18,7 @@ interface ShareData {
     size: number
     mimeType: string
     url: string
+    downloadUrl?: string
   }
 }
 
@@ -94,8 +95,9 @@ export default function SharePage() {
   }
 
   const handleDownload = () => {
+    // downloadUrl 已带 attname，点击即由七牛返回 attachment，避免浏览器内联预览
     const link = document.createElement('a')
-    link.href = fileUrl
+    link.href = file.downloadUrl ?? fileUrl
     link.download = file.name
     link.click()
   }
