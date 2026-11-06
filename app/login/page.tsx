@@ -137,9 +137,9 @@ export default function LoginPage() {
             </div>
             {captcha && (
               <div className="space-y-2">
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <div
-                    className="shrink-0 overflow-hidden rounded-md border border-border bg-muted/40"
+                    className="flex h-11 shrink-0 items-center overflow-hidden rounded-md border border-border bg-muted/40 [&>svg]:block [&>svg]:h-full [&>svg]:w-auto"
                     // SVG 由本服务生成，内容可控；答案不以文本形式出现在图片中
                     dangerouslySetInnerHTML={{ __html: captcha.svg }}
                   />
@@ -159,11 +159,10 @@ export default function LoginPage() {
                   <Button
                     type="button"
                     variant="outline"
-                    size="icon"
                     onClick={() => void refreshCaptcha()}
                     aria-label="刷新验证码"
                     title="刷新验证码"
-                    className="shrink-0"
+                    className="h-11 w-11 shrink-0 rounded-md p-0"
                   >
                     <RefreshCw className="h-4 w-4" aria-hidden="true" />
                   </Button>
