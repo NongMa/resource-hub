@@ -59,6 +59,18 @@ CREATE UNIQUE INDEX "users_email_key" ON "users"("email");
 -- CreateIndex
 CREATE UNIQUE INDEX "shares_token_key" ON "shares"("token");
 
+-- CreateIndex
+CREATE INDEX "folders_userId_parentId_name_idx" ON "folders"("userId", "parentId", "name");
+
+-- CreateIndex
+CREATE INDEX "files_userId_folderId_createdAt_id_idx" ON "files"("userId", "folderId", "createdAt" DESC, "id" DESC);
+
+-- CreateIndex
+CREATE INDEX "shares_userId_createdAt_idx" ON "shares"("userId", "createdAt");
+
+-- CreateIndex
+CREATE INDEX "shares_fileId_idx" ON "shares"("fileId");
+
 -- AddForeignKey
 ALTER TABLE "folders" ADD CONSTRAINT "folders_parentId_fkey" FOREIGN KEY ("parentId") REFERENCES "folders"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 

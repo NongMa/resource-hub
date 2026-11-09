@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { PrismaClient } from '@prisma/client'
+import { prisma } from '@/lib/prisma'
 import { createHash, timingSafeEqual } from 'crypto'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
-const prisma = new PrismaClient()
 const NO_STORE = { 'Cache-Control': 'no-store' }
 
 function equalSecret(a: string, b: string): boolean {

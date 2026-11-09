@@ -1,12 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { PrismaClient } from '@prisma/client'
+import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 import { createHash, timingSafeEqual } from 'crypto'
 import { attemptLogin } from '@/lib/login-guard'
 import { consumeEmailCode } from '@/lib/email-verification'
 import type { EmailCodeStatus } from '@/lib/email-verification'
-
-const prisma = new PrismaClient()
 
 /** 邮箱验证码失败原因到 HTTP 错误码的映射 */
 function emailCodeError(status: Exclude<EmailCodeStatus, 'ok'>) {

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { PrismaClient } from '@prisma/client'
+import { prisma } from '@/lib/prisma'
 import { isSmtpConfigured, sendEmailCode, sendRegisteredNotice } from '@/lib/mailer'
 import {
   EMAIL_CODE_RESEND_SECONDS,
@@ -14,7 +14,6 @@ import {
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
-const prisma = new PrismaClient()
 const NO_STORE = { 'Cache-Control': 'no-store' }
 
 type Purpose = 'register' | 'reset'

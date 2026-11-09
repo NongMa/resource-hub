@@ -4,11 +4,9 @@ import type { JWT } from 'next-auth/jwt'
 import CredentialsProvider from 'next-auth/providers/credentials'
 import GitHubProvider from 'next-auth/providers/github'
 import GoogleProvider from 'next-auth/providers/google'
-import { PrismaClient } from '@prisma/client'
+import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 import { consumeLoginTicket } from '@/lib/login-guard'
-
-const prisma = new PrismaClient()
 
 /** JWT 中记录的会话版本与最近一次回库核对时间 */
 type SessionVersionToken = JWT & {

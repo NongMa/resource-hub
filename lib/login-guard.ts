@@ -7,7 +7,9 @@ import {
   randomInt,
   timingSafeEqual,
 } from 'crypto'
-import { Prisma, PrismaClient } from '@prisma/client'
+import { Prisma } from '@prisma/client'
+import type { PrismaClient } from '@prisma/client'
+import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 
 /**
@@ -27,8 +29,6 @@ const CAPTCHA_THRESHOLD = 1
 /** 清理保留期 */
 const CAPTCHA_RETENTION_MS = 15 * 60 * 1000
 const ATTEMPT_RETENTION_MS = 24 * 60 * 60 * 1000
-
-const prisma = new PrismaClient()
 
 function getSecret(): string {
   const secret = process.env.NEXTAUTH_SECRET

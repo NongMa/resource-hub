@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { PrismaClient } from '@prisma/client'
+import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 import { clearLoginAttempts } from '@/lib/login-guard'
 import { consumeEmailCode, isValidEmail, normalizeEmail } from '@/lib/email-verification'
@@ -8,7 +8,6 @@ import type { EmailCodeStatus } from '@/lib/email-verification'
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
-const prisma = new PrismaClient()
 const NO_STORE = { 'Cache-Control': 'no-store' }
 
 function emailCodeError(status: Exclude<EmailCodeStatus, 'ok'>) {

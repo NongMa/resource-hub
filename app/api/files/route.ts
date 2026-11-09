@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { PrismaClient } from '@prisma/client'
+import { prisma } from '@/lib/prisma'
 import {
   deleteFile as deleteQiniuFile,
   getFileUrl,
@@ -11,8 +11,6 @@ import {
   isProcessableImage,
 } from '@/lib/qiniu'
 import { isKeyOwnedByUser } from '@/lib/fileKey'
-
-const prisma = new PrismaClient()
 
 // 获取文件列表 / 创建文件
 export async function GET(request: NextRequest) {

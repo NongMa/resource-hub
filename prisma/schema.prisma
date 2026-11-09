@@ -35,6 +35,7 @@ model Folder {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   files     File[]
 
+  @@index([userId, parentId, name])
   @@map("folders")
 }
 
@@ -53,6 +54,7 @@ model File {
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   shares      Share[]
 
+  @@index([userId, folderId, createdAt(sort: Desc), id(sort: Desc)])
   @@map("files")
 }
 
@@ -67,6 +69,8 @@ model Share {
   file      File     @relation(fields: [fileId], references: [id], onDelete: Cascade)
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([userId, createdAt])
+  @@index([fileId])
   @@map("shares")
 }
 
