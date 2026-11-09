@@ -178,17 +178,30 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: '无权操作该文件' }, { status: 403 })
     }
 
-    // 删除七牛云文件
+    // 先删存储对象：失败时保留数据库记录并返回 5xx，用户可重试；
+    // 不能先删库，否则会出现“记录没了但对象还在”的孤儿对象。
     try {
       await deleteQiniuFile(file.key)
     } catch (e) {
       console.error('Delete qiniu file error:', e)
+      return NextResponse.json(
+        { error: '文件存储删除失败，请稍后重试', code: 'STORAGE_DELETE_FAILED' },
+        { status: 502 }
+      )
     }
 
-    // 删除数据库记录
-    await prisma.file.delete({
-      where: { id: fileId },
-    })
+    // 对象已不存在（含重试场景：上次七牛已删、库未删）时，继续删库即可收尾
+    try {
+      await prisma.file.delete({
+        where: { id: fileId },
+      })
+    } catch (e) {
+      console.error('Delete file record error:', e)
+      return NextResponse.json(
+        { error: '文件记录删除失败，请重试', code: 'RECORD_DELETE_FAILED' },
+        { status: 500 }
+      )
+    }
 
     return NextResponse.json({ success: true })
   } catch (error) {

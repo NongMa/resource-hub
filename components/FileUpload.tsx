@@ -87,7 +87,7 @@ export function FileUpload({ folderId, onUploadComplete }: FileUploadProps) {
           })
 
           // 保存文件信息到数据库
-          await fetch('/api/files', {
+          const createRes = await fetch('/api/files', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -98,6 +98,15 @@ export function FileUpload({ folderId, onUploadComplete }: FileUploadProps) {
               folderId,
             }),
           })
+
+          if (!createRes.ok) {
+            // 对象已上传到七牛但记录创建失败：尽力删除该 key，避免留下孤儿对象。
+            // 清理本身失败不阻塞主流程（错误信息仍需让用户看到）。
+            await fetch(`/api/files/upload?key=${encodeURIComponent(key)}`, {
+              method: 'DELETE',
+            }).catch(() => {})
+            throw new Error('文件已上传到存储，但保存文件记录失败，请重试')
+          }
 
         }
 

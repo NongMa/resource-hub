@@ -8,13 +8,9 @@ import { Card, CardContent } from '@/components/ui/card'
 import { getFileType, formatFileSize } from '@/lib/utils'
 
 interface ShareData {
-  id: string
-  token: string
   expiresAt: string | null
   file: {
-    id: string
     name: string
-    key: string
     size: number
     mimeType: string
     url: string

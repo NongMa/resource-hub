@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { PrismaClient } from '@prisma/client'
-import { generateShareToken } from '@/lib/utils'
+import { generateShareToken } from '@/lib/share-token'
 import { getFileUrl, getDownloadUrl } from '@/lib/qiniu'
 
 const prisma = new PrismaClient()
@@ -84,10 +84,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: '分享已过期' }, { status: 410 })
     }
 
+    // 只下发分享页真正需要的字段：
+    // password / userId / fileId / key 等内部字段不出现在匿名响应中
     return NextResponse.json({
-      ...share,
+      expiresAt: share.expiresAt,
       file: {
-        ...share.file,
+        name: share.file.name,
+        size: share.file.size,
+        mimeType: share.file.mimeType,
         url: getFileUrl(share.file.key),
         downloadUrl: getDownloadUrl(share.file.key, share.file.name),
       },

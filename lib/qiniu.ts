@@ -161,16 +161,17 @@ export function getDownloadUrl(key: string, name: string, expires: number = 3600
 
 /**
  * 删除七牛云文件
+ * 612（对象不存在）视为成功：删除接口可安全重试，不会因为“已经删掉了”而失败。
  */
 export function deleteFile(key: string): Promise<void> {
   return new Promise((resolve, reject) => {
     bucketManager.delete(bucket, key, (err, respBody, respInfo) => {
       if (err) {
         reject(err)
-      } else if (respInfo.statusCode !== 200) {
-        reject(new Error(`Delete failed: ${respInfo.statusCode}`))
-      } else {
+      } else if (respInfo.statusCode === 200 || respInfo.statusCode === 612) {
         resolve()
+      } else {
+        reject(new Error(`Delete failed: ${respInfo.statusCode}`))
       }
     })
   })
