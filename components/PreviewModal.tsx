@@ -2,8 +2,19 @@
 
 import { X, Download, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import dynamic from 'next/dynamic'
 import { Button } from '@/components/ui/button'
 import { getFileType, formatFileSize } from '@/lib/utils'
+
+// pdfjs 只在打开 PDF 时下载，不进入列表页首屏包
+const PdfPreview = dynamic(() => import('@/components/PdfPreview').then((m) => m.PdfPreview), {
+  ssr: false,
+  loading: () => (
+    <div className="flex h-[70vh] items-center justify-center rounded-lg border bg-muted/40">
+      <p className="text-xs text-muted-foreground">正在加载 PDF…</p>
+    </div>
+  ),
+})
 
 interface PreviewModalProps {
   open: boolean
@@ -23,6 +34,11 @@ interface PreviewModalProps {
 }
 
 type ImageVersion = 'original' | 'slim' | 'small'
+
+/** PDF 走浏览器内置阅读器，用文件名兜底（部分上传来源的 mimeType 不可靠） */
+function isPdfFile(file: { name: string; mimeType: string }): boolean {
+  return file.mimeType === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')
+}
 
 export function PreviewModal({ open, onOpenChange, file }: PreviewModalProps) {
   const [imageError, setImageError] = useState(false)
@@ -116,6 +132,24 @@ export function PreviewModal({ open, onOpenChange, file }: PreviewModalProps) {
           </div>
         )
       case 'document':
+        if (isPdfFile(file)) {
+          return (
+            <div className="flex flex-col gap-2">
+              <PdfPreview url={fileUrl} fileName={file.name} />
+              <p className="text-right text-xs text-muted-foreground">
+                显示异常可
+                <a
+                  href={fileUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="ml-1 font-medium text-foreground underline underline-offset-2"
+                >
+                  在新窗口打开
+                </a>
+              </p>
+            </div>
+          )
+        }
         return (
           <div className="flex flex-col items-center justify-center py-12">
             <p className="text-muted-foreground mb-4">预览不支持此文件类型</p>

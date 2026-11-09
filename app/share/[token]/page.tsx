@@ -2,10 +2,21 @@
 
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
+import dynamic from 'next/dynamic'
 import { Download, File, Image, Video, Music, FileText, ArrowLeft, Calendar } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { getFileType, formatFileSize } from '@/lib/utils'
+
+// pdfjs 只在分享的是 PDF 时才下载
+const PdfPreview = dynamic(() => import('@/components/PdfPreview').then((m) => m.PdfPreview), {
+  ssr: false,
+  loading: () => (
+    <div className="flex h-[60vh] items-center justify-center rounded-lg border bg-muted/50">
+      <p className="text-xs text-muted-foreground">正在加载 PDF…</p>
+    </div>
+  ),
+})
 
 interface ShareData {
   expiresAt: string | null
@@ -74,6 +85,7 @@ export default function SharePage() {
   const { file } = shareData
   const fileType = getFileType(file.mimeType)
   const fileUrl = file.url
+  const isPdf = file.mimeType === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')
 
   const getIcon = () => {
     switch (fileType) {
@@ -110,18 +122,35 @@ export default function SharePage() {
           <CardContent className="pt-6">
             <div className="space-y-6">
               {/* 文件预览 */}
-              <div className="flex items-center justify-center bg-muted/50 rounded-lg p-8 min-h-[200px]">
-                {fileType === 'image' && !imageError ? (
-                  <img
-                    src={fileUrl}
-                    alt={file.name}
-                    className="max-w-full max-h-[400px] object-contain"
-                    onError={() => setImageError(true)}
-                  />
-                ) : (
-                  getIcon()
-                )}
-              </div>
+              {isPdf ? (
+                <div className="space-y-2">
+                  <PdfPreview url={fileUrl} fileName={file.name} />
+                  <p className="text-right text-xs text-muted-foreground">
+                    显示异常可
+                    <a
+                      href={fileUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="ml-1 font-medium text-foreground underline underline-offset-2"
+                    >
+                      在新窗口打开
+                    </a>
+                  </p>
+                </div>
+              ) : (
+                <div className="flex items-center justify-center bg-muted/50 rounded-lg p-8 min-h-[200px]">
+                  {fileType === 'image' && !imageError ? (
+                    <img
+                      src={fileUrl}
+                      alt={file.name}
+                      className="max-w-full max-h-[400px] object-contain"
+                      onError={() => setImageError(true)}
+                    />
+                  ) : (
+                    getIcon()
+                  )}
+                </div>
+              )}
 
               {/* 文件信息 */}
               <div className="space-y-2">
