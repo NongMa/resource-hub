@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
+import { ChevronRight } from 'lucide-react'
 import { DashboardLayout } from '../DashboardLayout'
 import { FileList } from '@/components/FileList'
 import { PreviewModal } from '@/components/PreviewModal'
@@ -21,10 +22,18 @@ interface FileItem {
   smallUrl?: string
 }
 
+interface FolderItem {
+  id: string
+  name: string
+}
+
 export default function DashboardPage() {
   const { data: session, status } = useSession()
   const router = useRouter()
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null)
+  const [subfolders, setSubfolders] = useState<FolderItem[]>([])
+  // 当前层级的进入路径，用于面包屑；仅前端状态，刷新后回到根目录
+  const [folderTrail, setFolderTrail] = useState<FolderItem[]>([])
   const [files, setFiles] = useState<FileItem[]>([])
   const [searchInput, setSearchInput] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
@@ -92,6 +101,29 @@ export default function DashboardPage() {
     [currentFolderId, pageSize, searchQuery]
   )
 
+  // 拉取当前层级的子文件夹（GET /api/folders 支持 parentId，无需新增接口）
+  const loadSubfolders = useCallback(async () => {
+    try {
+      const url = new URL('/api/folders', window.location.origin)
+      if (currentFolderId) {
+        url.searchParams.set('parentId', currentFolderId)
+      }
+      const res = await fetch(url.toString())
+      if (!res.ok) return
+
+      const data = await res.json()
+      setSubfolders(Array.isArray(data) ? data : [])
+    } catch (error) {
+      console.error('Fetch folders error:', error)
+    }
+  }, [currentFolderId])
+
+  useEffect(() => {
+    if (status === 'authenticated') {
+      loadSubfolders()
+    }
+  }, [status, loadSubfolders])
+
   // 输入防抖 300ms：停止输入后再发起服务端搜索
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -133,6 +165,8 @@ export default function DashboardPage() {
       })
       if (res.ok) {
         reload()
+        // 新建的可能是当前层级的子文件夹，需同步刷新文件夹卡片
+        loadSubfolders()
       }
     } catch (error) {
       console.error('Create folder error:', error)
@@ -184,8 +218,35 @@ export default function DashboardPage() {
     }
   }
 
-  const handleNavigateToFolder = (folderId: string | null) => {
+  // 侧栏只列出根文件夹：进入时重置为单层路径
+  const handleSidebarNavigateToFolder = (folderId: string | null, folderName?: string) => {
+    setFolderTrail(folderId ? [{ id: folderId, name: folderName || '文件夹' }] : [])
     setCurrentFolderId(folderId)
+    setSearchInput('')
+    setSearchQuery('')
+  }
+
+  // 主区点击文件夹卡片：进入下一层
+  const handleOpenSubfolder = (folder: FolderItem) => {
+    setFolderTrail((prev) => [...prev, folder])
+    setCurrentFolderId(folder.id)
+    setSearchInput('')
+    setSearchQuery('')
+  }
+
+  // 面包屑跳转：index = -1 表示根目录
+  const handleBreadcrumbClick = (index: number) => {
+    if (index < 0) {
+      setFolderTrail([])
+      setCurrentFolderId(null)
+    } else {
+      const target = folderTrail[index]
+      if (!target) return
+      setFolderTrail(folderTrail.slice(0, index + 1))
+      setCurrentFolderId(target.id)
+    }
+    setSearchInput('')
+    setSearchQuery('')
   }
 
   if (status === 'loading') {
@@ -201,12 +262,46 @@ export default function DashboardPage() {
   }
 
   return (
-    <DashboardLayout currentFolderId={currentFolderId} onNavigateToFolder={handleNavigateToFolder}>
+    <DashboardLayout currentFolderId={currentFolderId} onNavigateToFolder={handleSidebarNavigateToFolder}>
       <div className="space-y-4">
         <div>
           <h2 className="text-2xl font-bold">我的文件</h2>
           <p className="text-muted-foreground">管理您的文件资源</p>
         </div>
+
+        {/* 面包屑：根目录 + 逐层进入路径，窄屏可横向换行 */}
+        <nav aria-label="当前位置" className="flex flex-wrap items-center gap-1 text-sm">
+          <button
+            type="button"
+            onClick={() => handleBreadcrumbClick(-1)}
+            aria-current={folderTrail.length === 0 ? 'page' : undefined}
+            className={
+              folderTrail.length === 0
+                ? 'font-medium text-foreground'
+                : 'text-muted-foreground transition-colors hover:text-foreground'
+            }
+          >
+            我的文件
+          </button>
+          {folderTrail.map((folder, index) => (
+            <span key={folder.id} className="flex min-w-0 items-center gap-1">
+              <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+              <button
+                type="button"
+                onClick={() => handleBreadcrumbClick(index)}
+                aria-current={index === folderTrail.length - 1 ? 'page' : undefined}
+                className={
+                  index === folderTrail.length - 1
+                    ? 'max-w-[16rem] truncate font-medium text-foreground'
+                    : 'max-w-[12rem] truncate text-muted-foreground transition-colors hover:text-foreground'
+                }
+                title={folder.name}
+              >
+                {folder.name}
+              </button>
+            </span>
+          ))}
+        </nav>
 
         <FileList
           files={files}
@@ -218,6 +313,7 @@ export default function DashboardPage() {
           pageSize={pageSize}
           viewMode={viewMode}
           folderId={currentFolderId}
+          folders={subfolders}
           searchQuery={searchInput}
           onSearchQueryChange={setSearchInput}
           onCreateFolder={handleCreateFolder}
@@ -233,7 +329,7 @@ export default function DashboardPage() {
           }}
           onDelete={handleDeleteFile}
           onRename={handleRenameFile}
-          onNavigateToFolder={handleNavigateToFolder}
+          onNavigateToFolder={handleOpenSubfolder}
         />
       </div>
 

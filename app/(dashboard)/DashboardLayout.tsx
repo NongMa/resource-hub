@@ -27,7 +27,8 @@ interface FolderItem {
 interface DashboardLayoutProps {
   children: React.ReactNode
   currentFolderId: string | null
-  onNavigateToFolder: (folderId: string | null) => void
+  // 侧栏只列根文件夹；name 用于主区面包屑显示
+  onNavigateToFolder: (folderId: string | null, folderName?: string) => void
 }
 
 export function DashboardLayout({
@@ -118,8 +119,8 @@ export function DashboardLayout({
     return null
   }
 
-  const handleNavigate = (folderId: string | null) => {
-    onNavigateToFolder(folderId)
+  const handleNavigate = (folderId: string | null, folderName?: string) => {
+    onNavigateToFolder(folderId, folderName)
     setSidebarOpen(false)
   }
 
@@ -206,7 +207,7 @@ export function DashboardLayout({
                     <Button
                       variant={currentFolderId === folder.id ? 'secondary' : 'ghost'}
                       className="w-full justify-start"
-                      onClick={() => handleNavigate(folder.id)}
+                      onClick={() => handleNavigate(folder.id, folder.name)}
                     >
                       <FolderOpen className="h-4 w-4 mr-2 shrink-0" />
                       <span className="truncate">{folder.name}</span>

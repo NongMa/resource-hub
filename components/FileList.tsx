@@ -6,6 +6,7 @@ import {
   Eye,
   File,
   FileText,
+  Folder,
   FolderPlus,
   Grid3X3,
   Image as ImageIcon,
@@ -55,6 +56,7 @@ interface FileListProps {
   pageSize: number
   viewMode: ViewMode
   folderId?: string | null
+  folders: Array<{ id: string; name: string }>
   searchQuery: string
   onSearchQueryChange: (value: string) => void
   onCreateFolder: (name: string, parentId?: string) => void
@@ -67,7 +69,7 @@ interface FileListProps {
   onShare: (file: FileItem) => void
   onDelete: (file: FileItem) => void
   onRename: (file: FileItem) => void
-  onNavigateToFolder: (folderId: string) => void
+  onNavigateToFolder: (folder: { id: string; name: string }) => void
 }
 
 const TYPE_LABELS: Record<string, string> = {
@@ -135,6 +137,7 @@ export function FileList({
   pageSize,
   viewMode,
   folderId,
+  folders,
   searchQuery,
   onSearchQueryChange,
   onCreateFolder,
@@ -391,6 +394,24 @@ export function FileList({
           </div>
         </div>
       </div>
+
+      {/* 当前层级的子文件夹：主区可见、可进入；搜索态隐藏，避免与搜索结果混淆 */}
+      {folders.length > 0 && !searchQuery && (
+        <div className="grid grid-cols-2 gap-3 min-[420px]:grid-cols-3 sm:grid-cols-4 lg:grid-cols-5">
+          {folders.map((folder) => (
+            <button
+              key={folder.id}
+              type="button"
+              onClick={() => onNavigateToFolder(folder)}
+              title={folder.name}
+              className="flex items-center gap-2 rounded-lg border bg-card px-3 py-3 text-left transition-colors hover:border-primary/40 hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+            >
+              <Folder className="h-5 w-5 shrink-0 text-primary" aria-hidden="true" />
+              <span className="truncate text-sm font-medium">{folder.name}</span>
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* 上传区域 */}
       <FileUpload folderId={folderId} onUploadComplete={onRefresh} />
