@@ -47,7 +47,11 @@ export default function DashboardPage() {
   const [hasMore, setHasMore] = useState(false)
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
+  // 点「搜索」后到结果返回前，按钮显示 loading（不发新请求也能看出有进度）
+  const [searchPending, setSearchPending] = useState(false)
   const loadingMoreRef = useRef(false)
+  // 当前在飞的列表请求：用于同请求去重、以及取消被新请求取代的旧请求
+  const activeRequestRef = useRef<{ key: string; controller: AbortController; append: boolean } | null>(null)
   const [previewFile, setPreviewFile] = useState<FileItem | null>(null)
   const [shareFile, setShareFile] = useState<{ id: string; name: string } | null>(null)
   const [showShareModal, setShowShareModal] = useState(false)
@@ -73,6 +77,23 @@ export default function DashboardPage() {
   const loadFiles = useCallback(
     async (targetPage: number, options: { append?: boolean; size?: number } = {}) => {
       const append = !!options.append
+      const size = options.size ?? pageSize
+      const requestKey = JSON.stringify([targetPage, size, currentFolderId, searchQuery, append])
+
+      const active = activeRequestRef.current
+      if (active) {
+        // 完全相同的请求已在飞：连点搜索 / 重复触发直接忽略
+        if (active.key === requestKey) return
+        // 已有请求在飞时不再叠加滚动加载
+        if (append) return
+
+        // 新的列表请求（搜索 / 切目录 / 翻页 / 刷新）取消上一次，避免旧响应覆盖新结果
+        active.controller.abort()
+        if (active.append) {
+          loadingMoreRef.current = false
+          setLoadingMore(false)
+        }
+      }
 
       // 追加加载用 ref 兜底，避免滚动监听连续触发导致重复请求
       if (append) {
@@ -83,10 +104,13 @@ export default function DashboardPage() {
         setLoading(true)
       }
 
+      const controller = new AbortController()
+      activeRequestRef.current = { key: requestKey, controller, append }
+
       try {
         const url = new URL('/api/files', window.location.origin)
         url.searchParams.set('page', String(targetPage))
-        url.searchParams.set('pageSize', String(options.size ?? pageSize))
+        url.searchParams.set('pageSize', String(size))
         if (currentFolderId) {
           url.searchParams.set('folderId', currentFolderId)
         }
@@ -94,13 +118,18 @@ export default function DashboardPage() {
           url.searchParams.set('q', searchQuery)
         }
 
-        const res = await fetch(url.toString())
+        const res = await fetch(url.toString(), { signal: controller.signal })
         if (!res.ok) {
-          showError('文件列表加载失败，请重试', () => loadFiles(targetPage, options))
+          if (activeRequestRef.current?.controller === controller) {
+            showError('文件列表加载失败，请重试', () => loadFiles(targetPage, options))
+          }
           return
         }
 
         const data = await res.json()
+        // 已被更新的请求取代（例如快速改关键词）：丢弃旧响应
+        if (activeRequestRef.current?.controller !== controller) return
+
         setFiles((prev) => {
           if (!append) return data.files
 
@@ -112,14 +141,23 @@ export default function DashboardPage() {
         setTotal(data.total)
         setHasMore(data.hasMore)
       } catch (error) {
+        // 主动取消（AbortController）不算错误，不弹提示
+        if ((error as Error)?.name === 'AbortError') return
         console.error('Fetch files error:', error)
-        showError('网络异常，文件列表加载失败', () => loadFiles(targetPage, options))
+        if (activeRequestRef.current?.controller === controller) {
+          showError('网络异常，文件列表加载失败', () => loadFiles(targetPage, options))
+        }
       } finally {
-        if (append) {
-          loadingMoreRef.current = false
-          setLoadingMore(false)
-        } else {
-          setLoading(false)
+        // 只有仍是当前请求时才复位状态，避免旧请求结束时把新请求的 loading 关掉
+        if (activeRequestRef.current?.controller === controller) {
+          activeRequestRef.current = null
+          if (append) {
+            loadingMoreRef.current = false
+            setLoadingMore(false)
+          } else {
+            setLoading(false)
+            setSearchPending(false)
+          }
         }
       }
     },
@@ -157,9 +195,11 @@ export default function DashboardPage() {
   const handleSearchSubmit = useCallback(() => {
     const next = searchInput.trim().slice(0, MAX_SEARCH_LENGTH)
     setSearchInput(next)
+    // 从点击到响应返回期间按钮保持 loading，避免「点了没反应」的空档
+    setSearchPending(true)
 
     if (next === searchQuery) {
-      // 关键词没变（例如重复点「搜索」）时手动刷新第一页
+      // 关键词没变（例如重复点「搜索」）时手动刷新第一页；同请求在飞会被 loadFiles 去重
       loadFiles(1)
     } else {
       // searchQuery 变化会触发下面的 effect，自动回到第 1 页
@@ -386,6 +426,7 @@ export default function DashboardPage() {
           searchInput={searchInput}
           onSearchInputChange={setSearchInput}
           onSearchSubmit={handleSearchSubmit}
+          searching={searchPending}
           onCreateFolder={handleCreateFolder}
           onRefresh={reload}
           onViewModeChange={setViewMode}

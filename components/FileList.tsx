@@ -11,6 +11,7 @@ import {
   Grid3X3,
   Image as ImageIcon,
   List as ListIcon,
+  Loader2,
   Music,
   Search,
   Trash2,
@@ -64,6 +65,8 @@ interface FileListProps {
   onSearchInputChange: (value: string) => void
   /** 点击「搜索」或回车时触发 */
   onSearchSubmit: () => void
+  /** 搜索请求在飞：按钮显示 loading 并禁用，避免重复提交 */
+  searching: boolean
   onCreateFolder: (name: string, parentId?: string) => void
   onRefresh: () => void
   onViewModeChange: (mode: ViewMode) => void
@@ -132,6 +135,101 @@ function RowThumb({ file }: { file: FileItem }) {
   )
 }
 
+/** 骨架占位块：颜色走 bg-muted，深浅色主题自动适配；reduced motion 下不闪烁 */
+function Skeleton({ className }: { className?: string }) {
+  return (
+    <div
+      aria-hidden="true"
+      className={cn('animate-pulse rounded bg-muted motion-reduce:animate-none', className)}
+    />
+  )
+}
+
+/** 列表视图骨架：表头沿用真实表头，列宽与真实行一致 */
+function TableSkeleton({ rows }: { rows: number }) {
+  return (
+    <div className="overflow-x-auto rounded-lg border" aria-busy="true" aria-label="文件列表加载中">
+      <table className="w-full text-sm">
+        <thead className="bg-muted/50 text-muted-foreground">
+          <tr>
+            <th scope="col" className="px-2 py-2 text-left font-medium sm:px-3">
+              文件名
+            </th>
+            <th scope="col" className="hidden px-3 py-2 text-left font-medium sm:table-cell">
+              类型
+            </th>
+            <th scope="col" className="px-2 py-2 text-left font-medium whitespace-nowrap sm:px-3">
+              大小
+            </th>
+            <th scope="col" className="hidden px-3 py-2 text-left font-medium md:table-cell">
+              时间
+            </th>
+            <th scope="col" className="px-2 py-2 text-right font-medium sm:px-3">
+              操作
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {Array.from({ length: rows }).map((_, index) => (
+            <tr key={index} className="border-t">
+              <td className="px-2 py-1.5 sm:px-3">
+                <div className="flex items-center gap-2">
+                  <Skeleton className="h-8 w-8 shrink-0 rounded" />
+                  <Skeleton className="h-4 w-[60%] max-w-[320px]" />
+                </div>
+              </td>
+              <td className="hidden px-3 py-1.5 sm:table-cell">
+                <Skeleton className="h-4 w-10" />
+              </td>
+              <td className="px-2 py-1.5 sm:px-3">
+                <Skeleton className="h-4 w-14" />
+              </td>
+              <td className="hidden px-3 py-1.5 md:table-cell">
+                <Skeleton className="h-4 w-28" />
+              </td>
+              <td className="px-2 py-1.5 sm:px-3">
+                <div className="flex items-center justify-end gap-1">
+                  <Skeleton className="h-7 w-7 rounded-md" />
+                  <Skeleton className="h-7 w-7 rounded-md" />
+                  <Skeleton className="h-7 w-7 rounded-md" />
+                </div>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+/** 网格视图骨架：卡片比例和真实 FileCard 一致（正方形封面 + 两行文字） */
+function GridSkeleton({ cards }: { cards: number }) {
+  return (
+    <div
+      className="grid grid-cols-1 gap-4 min-[420px]:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5"
+      aria-busy="true"
+      aria-label="文件列表加载中"
+    >
+      {Array.from({ length: cards }).map((_, index) => (
+        <div key={index} className="overflow-hidden rounded-lg border bg-card">
+          <div className="aspect-square bg-muted/50 p-4">
+            <Skeleton className="h-full w-full rounded-md" />
+          </div>
+          <div className="p-3">
+            <div className="flex items-start gap-2">
+              <div className="min-w-0 flex-1 space-y-1.5">
+                <Skeleton className="h-3.5 w-[85%]" />
+                <Skeleton className="h-3 w-12" />
+              </div>
+              <Skeleton className="h-8 w-8 rounded-md" />
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 export function FileList({
   files,
   loading,
@@ -147,6 +245,7 @@ export function FileList({
   searchInput,
   onSearchInputChange,
   onSearchSubmit,
+  searching,
   onCreateFolder,
   onRefresh,
   onViewModeChange,
@@ -372,17 +471,31 @@ export function FileList({
             }}
           >
             <div className="relative min-w-0 flex-1 sm:w-64 sm:flex-none">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Search
+                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                aria-hidden="true"
+              />
               <Input
                 placeholder="搜索文件..."
                 aria-label="搜索文件"
                 maxLength={100}
                 value={searchInput}
                 onChange={(e) => onSearchInputChange(e.target.value)}
-                className="h-10 pl-9"
+                className="h-10 pl-10"
               />
             </div>
-            <Button type="submit" className="h-10 shrink-0" aria-label="搜索">
+            <Button
+              type="submit"
+              className="h-10 shrink-0"
+              aria-busy={searching}
+              aria-label="搜索"
+            >
+              {searching && (
+                <Loader2
+                  className="mr-1 h-4 w-4 animate-spin motion-reduce:animate-none"
+                  aria-hidden="true"
+                />
+              )}
               搜索
             </Button>
           </form>
@@ -436,9 +549,13 @@ export function FileList({
       {/* 上传区域 */}
       <FileUpload folderId={folderId} onUploadComplete={onRefresh} />
 
-      {/* 文件列表 */}
-      {loading && files.length === 0 ? (
-        <div className="py-12 text-center text-muted-foreground">加载中...</div>
+      {/* 文件列表：首屏 / 搜索 / 切目录 / 翻页统一用骨架屏，占位高度与一页真实内容一致 */}
+      {loading ? (
+        viewMode === 'grid' ? (
+          <GridSkeleton cards={pageSize} />
+        ) : (
+          <TableSkeleton rows={pageSize} />
+        )
       ) : files.length > 0 ? (
         viewMode === 'grid' ? (
           renderGrid()
