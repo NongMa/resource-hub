@@ -27,6 +27,9 @@ interface FolderItem {
   name: string
 }
 
+/** 搜索关键词上限，与接口保持一致（超长截断而不是报错） */
+const MAX_SEARCH_LENGTH = 100
+
 export default function DashboardPage() {
   const { data: session, status } = useSession()
   const router = useRouter()
@@ -150,14 +153,19 @@ export default function DashboardPage() {
     }
   }, [status, loadSubfolders])
 
-  // 输入防抖 300ms：停止输入后再发起服务端搜索
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setSearchQuery(searchInput.trim())
-    }, 300)
+  // 搜索改为手动触发：输入框只改 searchInput，点按钮/回车才把值落到 searchQuery 并发请求
+  const handleSearchSubmit = useCallback(() => {
+    const next = searchInput.trim().slice(0, MAX_SEARCH_LENGTH)
+    setSearchInput(next)
 
-    return () => clearTimeout(timer)
-  }, [searchInput])
+    if (next === searchQuery) {
+      // 关键词没变（例如重复点「搜索」）时手动刷新第一页
+      loadFiles(1)
+    } else {
+      // searchQuery 变化会触发下面的 effect，自动回到第 1 页
+      setSearchQuery(next)
+    }
+  }, [searchInput, searchQuery, loadFiles])
 
   // 目录 / 每页条数 / 搜索条件变化时重置到第一页；视图切换不参与请求
   useEffect(() => {
@@ -253,19 +261,16 @@ export default function DashboardPage() {
   }
 
   // 侧栏只列出根文件夹：进入时重置为单层路径
+  // 切换目录保留当前已生效的搜索词，避免输入框与列表状态不一致
   const handleSidebarNavigateToFolder = (folderId: string | null, folderName?: string) => {
     setFolderTrail(folderId ? [{ id: folderId, name: folderName || '文件夹' }] : [])
     setCurrentFolderId(folderId)
-    setSearchInput('')
-    setSearchQuery('')
   }
 
   // 主区点击文件夹卡片：进入下一层
   const handleOpenSubfolder = (folder: FolderItem) => {
     setFolderTrail((prev) => [...prev, folder])
     setCurrentFolderId(folder.id)
-    setSearchInput('')
-    setSearchQuery('')
   }
 
   // 面包屑跳转：index = -1 表示根目录
@@ -279,8 +284,6 @@ export default function DashboardPage() {
       setFolderTrail(folderTrail.slice(0, index + 1))
       setCurrentFolderId(target.id)
     }
-    setSearchInput('')
-    setSearchQuery('')
   }
 
   if (status === 'loading') {
@@ -379,8 +382,10 @@ export default function DashboardPage() {
           viewMode={viewMode}
           folderId={currentFolderId}
           folders={subfolders}
-          searchQuery={searchInput}
-          onSearchQueryChange={setSearchInput}
+          searchQuery={searchQuery}
+          searchInput={searchInput}
+          onSearchInputChange={setSearchInput}
+          onSearchSubmit={handleSearchSubmit}
           onCreateFolder={handleCreateFolder}
           onRefresh={reload}
           onViewModeChange={setViewMode}

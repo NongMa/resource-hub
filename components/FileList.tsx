@@ -57,8 +57,13 @@ interface FileListProps {
   viewMode: ViewMode
   folderId?: string | null
   folders: Array<{ id: string; name: string }>
+  /** 已生效的搜索关键词（决定空态文案、是否隐藏文件夹卡片） */
   searchQuery: string
-  onSearchQueryChange: (value: string) => void
+  /** 输入框里的内容，与 searchQuery 分开，未提交前不影响列表 */
+  searchInput: string
+  onSearchInputChange: (value: string) => void
+  /** 点击「搜索」或回车时触发 */
+  onSearchSubmit: () => void
   onCreateFolder: (name: string, parentId?: string) => void
   onRefresh: () => void
   onViewModeChange: (mode: ViewMode) => void
@@ -139,7 +144,9 @@ export function FileList({
   folderId,
   folders,
   searchQuery,
-  onSearchQueryChange,
+  searchInput,
+  onSearchInputChange,
+  onSearchSubmit,
   onCreateFolder,
   onRefresh,
   onViewModeChange,
@@ -356,16 +363,29 @@ export function FileList({
     <div className="space-y-4">
       {/* 工具栏 */}
       <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          <div className="relative flex-1 sm:w-64">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="搜索文件..."
-              value={searchQuery}
-              onChange={(e) => onSearchQueryChange(e.target.value)}
-              className="pl-9"
-            />
-          </div>
+        <div className="flex w-full items-center gap-2 sm:w-auto">
+          <form
+            className="flex w-full min-w-0 items-center gap-2 sm:w-auto"
+            onSubmit={(e) => {
+              e.preventDefault()
+              onSearchSubmit()
+            }}
+          >
+            <div className="relative min-w-0 flex-1 sm:w-64 sm:flex-none">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="搜索文件..."
+                aria-label="搜索文件"
+                maxLength={100}
+                value={searchInput}
+                onChange={(e) => onSearchInputChange(e.target.value)}
+                className="h-10 pl-9"
+              />
+            </div>
+            <Button type="submit" className="h-10 shrink-0" aria-label="搜索">
+              搜索
+            </Button>
+          </form>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Button variant="outline" size="sm" onClick={() => setShowNewFolderDialog(true)}>
