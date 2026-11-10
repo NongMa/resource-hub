@@ -12,6 +12,17 @@ import {
 } from '@/lib/qiniu'
 import { isKeyOwnedByUser } from '@/lib/fileKey'
 
+/**
+ * Prisma 的 contains 会原样拼进 ILIKE 模式，% 和 _ 会被当作通配符（例如 q=__ 会命中所有文件名）。
+ * 这里按 PostgreSQL LIKE 的默认转义符 \ 做转义，让它们按字面匹配。
+ */
+function escapeLikePattern(value: string): string {
+  return value.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_')
+}
+
+/** 搜索关键词上限：超长直接截断，不报错 */
+const MAX_SEARCH_LENGTH = 100
+
 // 获取文件列表 / 创建文件
 export async function GET(request: NextRequest) {
   try {
@@ -40,7 +51,8 @@ export async function GET(request: NextRequest) {
     }
 
     // 搜索关键词：按文件名包含匹配，仅在当前文件夹内生效；q 为空时行为不变
-    const q = (searchParams.get('q') || '').trim()
+    const rawQuery = (searchParams.get('q') || '').trim().slice(0, MAX_SEARCH_LENGTH)
+    const q = rawQuery ? escapeLikePattern(rawQuery) : ''
 
     const where = {
       userId: user.id,
